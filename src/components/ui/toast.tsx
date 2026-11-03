@@ -2,12 +2,17 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
-const ToastContext = createContext<{ showError: (message: string) => void } | null>(null);
+type ToastVariant = "success" | "error";
+const ToastContext = createContext<{
+  showError: (message: string) => void;
+  showSuccess: (message: string) => void;
+} | null>(null);
 
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const [toast, setToast] = useState<{ message: string } | null>(null);
-  const showError = useCallback((message: string) => setToast({ message }), []);
-  const context = useMemo(() => ({ showError }), [showError]);
+  const [toast, setToast] = useState<{ message: string; variant: ToastVariant } | null>(null);
+  const showError = useCallback((message: string) => setToast({ message, variant: "error" }), []);
+  const showSuccess = useCallback((message: string) => setToast({ message, variant: "success" }), []);
+  const context = useMemo(() => ({ showError, showSuccess }), [showError, showSuccess]);
 
   useEffect(() => {
     if (!toast) return;
@@ -19,7 +24,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={context}>
       {children}
       {toast && (
-        <div className="toast" role="alert" aria-label="Erro" aria-atomic="true">
+        <div className={`toast toast-${toast.variant}`} role={toast.variant === "error" ? "alert" : "status"}
+          aria-label={toast.variant === "error" ? "Erro" : "Sucesso"} aria-atomic="true">
           <p>{toast.message}</p>
           <button type="button" onClick={() => setToast(null)} aria-label="Fechar notificação">Fechar</button>
         </div>

@@ -2,6 +2,7 @@
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { ToastProvider } from "@/components/ui/toast";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { taskInputSchema, type Task } from "@/features/tasks/schemas/task.schema";
 import { CreateRandomTasksButton } from "./create-random-tasks-button";
@@ -26,7 +27,7 @@ function ListedTaskCount() {
 
 function renderButton() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
-  render(<QueryClientProvider client={client}><CreateRandomTasksButton /><ListedTaskCount /></QueryClientProvider>);
+  render(<ToastProvider><QueryClientProvider client={client}><CreateRandomTasksButton /><ListedTaskCount /></QueryClientProvider></ToastProvider>);
 }
 
 afterEach(cleanup);
@@ -45,7 +46,7 @@ describe("random task creation button", () => {
     await userEvent.click(button);
     await screen.findByText("10 tasks listed");
     expect(api.create).toHaveBeenCalledTimes(10);
-    expect(screen.getByRole("status").textContent).toBe("10 tarefas aleatórias criadas.");
+    expect(screen.getByRole("status", { name: "Sucesso" }).textContent).toContain("10 tarefas aleatórias criadas.");
     await waitFor(() => expect(button).toHaveProperty("disabled", false));
     await userEvent.click(button);
     await screen.findByText("20 tasks listed");
@@ -76,7 +77,7 @@ describe("random task creation button", () => {
     renderButton();
     await userEvent.click(screen.getByRole("button", { name: "Criar 10 tarefas aleatórias" }));
     await screen.findByText("9 tasks listed");
-    expect(screen.getByRole("alert").textContent).toBe("9 de 10 tarefas foram criadas.");
+    expect(screen.getByRole("alert", { name: "Erro" }).textContent).toContain("9 de 10 tarefas foram criadas.");
     expect(api.create).toHaveBeenCalledTimes(10);
   });
 
@@ -84,7 +85,7 @@ describe("random task creation button", () => {
     api.create.mockRejectedValue(new Error("Request failed"));
     renderButton();
     await userEvent.click(screen.getByRole("button", { name: "Criar 10 tarefas aleatórias" }));
-    expect((await screen.findByRole("alert")).textContent).toBe("0 de 10 tarefas foram criadas.");
+    expect((await screen.findByRole("alert", { name: "Erro" })).textContent).toContain("0 de 10 tarefas foram criadas.");
     expect(api.list).not.toHaveBeenCalled();
     expect(screen.getByText("0 tasks listed")).toBeTruthy();
   });

@@ -48,6 +48,27 @@ function QueryFailureTrigger() {
 }
 
 describe("tRPC error toasts", () => {
+  it("shows creation success as a toast that survives navigation to the list", async () => {
+    const caller = appRouter.createCaller({});
+    const existingIds = new Set((await caller.tasks.list()).map((task) => task.id));
+    try {
+      const view = render(<AppProviders><CreateTask /></AppProviders>);
+      await userEvent.type(screen.getByLabelText(/Título/), "Successful toast task");
+      await userEvent.click(screen.getByRole("button", { name: "Criar tarefa" }));
+      const toast = await screen.findByRole("status", { name: "Sucesso" });
+      expect(toast.textContent).toContain("Tarefa criada com sucesso.");
+      await waitFor(() => expect(navigation.push).toHaveBeenCalledWith("/"));
+      const initialPage = await caller.tasks.listPage({ limit: 10 });
+      view.rerender(<AppProviders><TaskList initialPage={initialPage} /></AppProviders>);
+      expect(screen.getByRole("status", { name: "Sucesso" }).textContent).toContain("Tarefa criada com sucesso.");
+      expect(screen.getByRole("heading", { name: "Successful toast task" })).toBeTruthy();
+    } finally {
+      for (const task of await caller.tasks.list()) {
+        if (!existingIds.has(task.id)) await caller.tasks.delete({ id: task.id });
+      }
+    }
+  });
+
   it("reloads the infinite list after creating ten random tasks without a cursor error", async () => {
     const caller = appRouter.createCaller({});
     const existingIds = new Set((await caller.tasks.list()).map((task) => task.id));
@@ -81,6 +102,8 @@ describe("tRPC error toasts", () => {
       await screen.findByRole("heading", { name: lastTask.title });
       await userEvent.click(screen.getByRole("button", { name: `Excluir ${deleted.title}` }));
       await screen.findByText("Tarefa excluída com sucesso.", {}, { timeout: 4000 });
+      await waitFor(() => expect(screen.getByRole("button", { name: `Excluir ${lastTask.title}` })).toHaveProperty("disabled", false), { timeout: 4000 });
+      expect(screen.getByRole("status", { name: "Sucesso" }).textContent).toContain("Tarefa excluída com sucesso.");
       expect(screen.queryByRole("alert", { name: "Erro" })).toBeNull();
       expect(screen.queryByRole("alert")).toBeNull();
       expect(screen.getAllByRole("listitem")).toHaveLength(11);

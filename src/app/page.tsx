@@ -7,14 +7,8 @@ import { CreateRandomTasksButton } from "@/features/tasks/components/create-rand
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export default async function HomePage({ searchParams }: {
-  searchParams: Promise<{ success?: string | string[] }>;
-}) {
+export default async function HomePage() {
   const initialPage = await appRouter.createCaller({}).tasks.listPage({ limit: TASK_PAGE_SIZE });
-  const { success } = await searchParams;
-  const successMessage = success === "created"
-    ? "Tarefa criada com sucesso."
-    : success === "updated" ? "Tarefa atualizada com sucesso." : undefined;
   return (
     <main>
       <h1>Gerenciador de tarefas</h1>
@@ -23,7 +17,7 @@ export default async function HomePage({ searchParams }: {
         <Link href="/tasks/new" className="button">Nova tarefa</Link>
         <CreateRandomTasksButton />
       </div>
-      <TaskList initialPage={initialPage} successMessage={successMessage} />
+      <TaskList initialPage={initialPage} />
     </main>
   );
 }

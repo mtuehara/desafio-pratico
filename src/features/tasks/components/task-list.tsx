@@ -5,16 +5,17 @@ import { useEffect, useRef } from "react";
 import { TASK_PAGE_SIZE, type TaskPage } from "@/features/tasks/schemas/task.schema";
 import { useTRPC } from "@/lib/trpc/client";
 import Link from "next/link";
+import { useToast } from "@/components/ui/toast";
 
 const formatDate = new Intl.DateTimeFormat("pt-BR", {
   dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo",
 });
 
-export function TaskList({ initialPage, successMessage }: {
+export function TaskList({ initialPage }: {
   initialPage: TaskPage;
-  successMessage?: string;
 }) {
   const trpc = useTRPC();
+  const { showSuccess } = useToast();
   const queryClient = useQueryClient();
   const sentinelRef = useRef<HTMLDivElement>(null);
   const query = useInfiniteQuery(trpc.tasks.listPage.infiniteQueryOptions(
@@ -46,6 +47,7 @@ export function TaskList({ initialPage, successMessage }: {
           ...page, items: page.items.filter((task) => task.id !== id),
         })) } : data,
       );
+      showSuccess("Tarefa excluída com sucesso.");
       await queryClient.invalidateQueries({ queryKey: trpc.tasks.pathKey() });
     },
   }));
@@ -57,9 +59,6 @@ export function TaskList({ initialPage, successMessage }: {
       {query.isError && <p role="alert">{query.isFetchNextPageError
         ? "Não foi possível carregar mais tarefas. Tente novamente."
         : "Não foi possível atualizar as tarefas. Tente novamente."}</p>}
-      {deleteTask.isError && <p role="alert">{deleteTask.error.message || "Não foi possível excluir a tarefa."}</p>}
-      {deleteTask.isSuccess && <p role="status">Tarefa excluída com sucesso.</p>}
-      {deleteTask.isIdle && successMessage && <p role="status">{successMessage}</p>}
       {tasks.length === 0 ? (
         <p className="empty">Nenhuma tarefa cadastrada.</p>
       ) : (

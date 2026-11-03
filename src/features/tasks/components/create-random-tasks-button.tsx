@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import type { TaskInput } from "@/features/tasks/schemas/task.schema";
 import { useTRPC } from "@/lib/trpc/client";
+import { useToast } from "@/components/ui/toast";
 
 function randomTask(): TaskInput {
   const actions = ["Revisar", "Organizar", "Planejar", "Preparar", "Concluir"];
@@ -16,21 +17,21 @@ function randomTask(): TaskInput {
 
 export function CreateRandomTasksButton() {
   const trpc = useTRPC();
+  const { showError, showSuccess } = useToast();
   const queryClient = useQueryClient();
   const create = useMutation(trpc.tasks.create.mutationOptions());
   const [isCreating, setIsCreating] = useState(false);
-  const [createdCount, setCreatedCount] = useState<number | null>(null);
 
   async function createTasks() {
     if (isCreating) return;
     setIsCreating(true);
-    setCreatedCount(null);
     try {
       const results = await Promise.allSettled(
         Array.from({ length: 10 }, () => create.mutateAsync(randomTask())),
       );
       const count = results.filter((result) => result.status === "fulfilled").length;
-      setCreatedCount(count);
+      if (count === 10) showSuccess("10 tarefas aleatórias criadas.");
+      else showError(`${count} de 10 tarefas foram criadas.`);
       if (count > 0) await queryClient.invalidateQueries({ queryKey: trpc.tasks.pathKey() });
     } finally {
       setIsCreating(false);
@@ -42,11 +43,6 @@ export function CreateRandomTasksButton() {
       <button type="button" className="secondary" disabled={isCreating} onClick={() => void createTasks()}>
         {isCreating ? "Criando tarefas…" : "Criar 10 tarefas aleatórias"}
       </button>
-      {createdCount !== null && (
-        <p role={createdCount === 10 ? "status" : "alert"}>
-          {createdCount === 10 ? "10 tarefas aleatórias criadas." : `${createdCount} de 10 tarefas foram criadas.`}
-        </p>
-      )}
     </div>
   );
 }

@@ -33,7 +33,7 @@ npm run lint
 npm run typecheck
 ```
 
-Use `npm run test:watch` during development. Tests cover input validation, isolated storage, CRUD procedures, server rendering, forms, pagination, HTTP errors and error toasts. Error-contract tests include `CONFLICT`/409 using test-only routers.
+Use `npm run test:watch` during development. Tests cover input validation, isolated storage, CRUD procedures, server rendering, forms, pagination, HTTP errors and success/error toasts. Error-contract tests include `CONFLICT`/409 using test-only routers.
 
 ## Challenge coverage
 
@@ -44,7 +44,7 @@ Use `npm run test:watch` during development. Tests cover input validation, isola
 | Validation and meaningful errors | Required trimmed title, optional description, `BAD_REQUEST` for invalid input and `NOT_FOUND` for missing tasks |
 | Server-rendered listing | The server loads the first page through a direct tRPC caller and includes tasks in the initial HTML |
 | Creation and editing forms | Functional components, controlled fields and hooks; shared validation and preserved input after failure |
-| Loading, success and error feedback | Pending controls, success messages, inline validation and client tRPC error toasts |
+| Loading, success and error feedback | Pending controls, inline field validation, success toasts and client tRPC error toasts |
 | Infinite scroll bonus | Cursor pagination, automatic incremental loading, manual fallback and retry after failure |
 | Documentation and tests | This README, comments on key decisions, unit tests, component tests and integration tests |
 
@@ -64,7 +64,7 @@ Updates replace editable fields; omitting the description clears it. Only the ta
 ```text
 src/
   app/                       # Routes, SSR, layout and application providers
-  components/ui/toast.tsx    # Shared error toast
+  components/ui/toast.tsx    # Shared success and error toast
   features/tasks/
     components/              # Task list, shared form, creation and editing
     schemas/task.schema.ts   # Zod schemas and inferred types
@@ -94,7 +94,7 @@ The first page contains up to 10 tasks. Further pages use a cursor containing cr
 
 `getById` supports loading the edit form. `listPage` supports infinite scroll and returns `{ items, nextCursor? }`. Page size defaults to 10 and accepts integers from 1 to 50. An omitted or null cursor requests the first page, including refetches after a mutation.
 
-The tRPC error formatter preserves standard codes and HTTP status mappings, including `CONFLICT`/409, and hides unexpected internal error messages. Client query and mutation errors reach the shared toast. Connection failures use a readable message, and local form validation remains inline.
+The tRPC error formatter preserves standard codes and HTTP status mappings, including `CONFLICT`/409, and hides unexpected internal error messages. Client query and mutation errors reach the shared toast. Creation, editing, deletion and random-task batches show success toasts after confirmation from the backend; partial batch failures show an error toast with the number created. Toasts survive navigation, expire after five seconds and can be dismissed. Success messages are not encoded in URLs or duplicated in the list. Connection failures use a readable message, and local form validation remains inline.
 
 Current task procedures do not enforce title uniqueness or manufacture a conflict response. Future procedures can raise `TRPCError` with code `CONFLICT`; transport and toast compatibility are tested without adding a production endpoint.
 

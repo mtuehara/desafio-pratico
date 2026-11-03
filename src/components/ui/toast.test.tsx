@@ -4,8 +4,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, useToast } from "./toast";
 
 function ErrorTrigger() {
-  const { showError } = useToast();
-  return <button onClick={() => showError("Tarefa não encontrada.")}>Trigger error</button>;
+  const { showError, showSuccess } = useToast();
+  return <>
+    <button onClick={() => showError("Tarefa não encontrada.")}>Trigger error</button>
+    <button onClick={() => showSuccess("Tarefa criada com sucesso.")}>Trigger success</button>
+  </>;
 }
 
 function renderToast() {
@@ -14,7 +17,22 @@ function renderToast() {
 
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 
-describe("error toast", () => {
+describe("toast feedback", () => {
+  it("shows success with a polite status announcement", () => {
+    renderToast();
+    fireEvent.click(screen.getByRole("button", { name: "Trigger success" }));
+    expect(screen.getByRole("status", { name: "Sucesso" }).textContent).toContain("Tarefa criada com sucesso.");
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("replaces earlier success feedback with a subsequent error", () => {
+    renderToast();
+    fireEvent.click(screen.getByRole("button", { name: "Trigger success" }));
+    fireEvent.click(screen.getByRole("button", { name: "Trigger error" }));
+    expect(screen.getByRole("alert", { name: "Erro" }).textContent).toContain("Tarefa não encontrada.");
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
   it("shows the error message as an accessible alert", () => {
     renderToast();
     fireEvent.click(screen.getByRole("button", { name: "Trigger error" }));

@@ -2,6 +2,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { ToastProvider } from "@/components/ui/toast";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CreateTask } from "./create-task";
 
@@ -23,7 +24,7 @@ beforeEach(() => {
 function renderCreateTask() {
   const client = new QueryClient();
   client.setQueryData(["tasks"], []);
-  render(<QueryClientProvider client={client}><CreateTask /></QueryClientProvider>);
+  render(<ToastProvider><QueryClientProvider client={client}><CreateTask /></QueryClientProvider></ToastProvider>);
   return client;
 }
 
@@ -32,10 +33,11 @@ describe("task creation", () => {
     const client = renderCreateTask();
     await userEvent.type(screen.getByLabelText(/Título/), "Estudar");
     await userEvent.click(screen.getByRole("button", { name: "Criar tarefa" }));
-    await waitFor(() => expect(api.push).toHaveBeenCalledWith("/?success=created"));
+    await waitFor(() => expect(api.push).toHaveBeenCalledWith("/"));
     expect(api.create.mock.calls[0][0]).toEqual({ title: "Estudar", description: undefined });
     expect(client.getQueryData(["tasks"])).toBeUndefined();
     expect(api.refresh).toHaveBeenCalled();
+    expect(screen.getByRole("status", { name: "Sucesso" }).textContent).toContain("Tarefa criada com sucesso.");
   });
 
   it("stays on the form when the API fails", async () => {
@@ -45,5 +47,6 @@ describe("task creation", () => {
     await userEvent.click(screen.getByRole("button", { name: "Criar tarefa" }));
     expect((await screen.findByRole("alert")).textContent).toBe("Falha ao criar tarefa.");
     expect(api.push).not.toHaveBeenCalled();
+    expect(screen.queryByRole("status", { name: "Sucesso" })).toBeNull();
   });
 });

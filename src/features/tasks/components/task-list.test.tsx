@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MutationCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useState } from "react";
+import { ToastProvider, useToast } from "@/components/ui/toast";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -32,13 +34,21 @@ const task: Task = {
   createdAt: Date.parse("2026-11-03T12:00:00Z"),
 };
 
-function renderTaskList(tasks: Task[] = [task], nextCursor?: TaskCursor) {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
-  return render(
+function TestTaskList({ tasks, nextCursor }: { tasks: Task[]; nextCursor?: TaskCursor }) {
+  const { showError } = useToast();
+  const [queryClient] = useState(() => new QueryClient({
+    mutationCache: new MutationCache({ onError: (error) => showError(error.message) }),
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+  }));
+  return (
     <QueryClientProvider client={queryClient}>
       <TaskList initialPage={{ items: tasks, nextCursor }} />
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+}
+
+function renderTaskList(tasks: Task[] = [task], nextCursor?: TaskCursor) {
+  return render(<ToastProvider><TestTaskList tasks={tasks} nextCursor={nextCursor} /></ToastProvider>);
 }
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
@@ -87,7 +97,7 @@ describe("task list", () => {
     renderTaskList();
     await userEvent.click(screen.getByRole("button", { name: `Excluir ${task.title}` }));
     await screen.findByRole("alert");
-    expect(screen.getByRole("alert").textContent).toBe("Tarefa não encontrada.");
+    expect(screen.getByRole("alert", { name: "Erro" }).textContent).toContain("Tarefa não encontrada.");
     expect(screen.getByRole("heading", { name: task.title })).toBeTruthy();
   });
 
