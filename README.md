@@ -1,6 +1,50 @@
 # Gerenciador de tarefas
 
-Desafio prático com Next.js 15, TypeScript e tRPC. Esta primeira etapa documenta a arquitetura; a aplicação ainda não foi implementada.
+Desafio prático com Next.js 15, TypeScript e tRPC. A base Next.js está implementada com uma página inicial mínima. A integração tRPC e as funcionalidades de tarefas serão adicionadas nas próximas etapas.
+
+## Executar a base
+
+Use Node.js 22 ou superior e npm. A base foi verificada com Node.js 24.13.0 e npm 11.6.2.
+
+```sh
+npm ci
+npm run dev
+```
+
+Abra [localhost:3000](http://localhost:3000). O comando de desenvolvimento usa Turbopack e recarrega a página ao alterar os arquivos.
+
+Para verificar o projeto e executar a versão de produção:
+
+```sh
+npm run lint
+npm run typecheck
+npm run build
+npm start
+```
+
+O `build` deve terminar antes do `start`. `npm ci` instala as versões registradas no `package-lock.json`. A base usa Next.js 15.5.29 e React/React DOM 19.3.1; o TypeScript está configurado em modo estrito.
+
+## Arquivos da base
+
+| Arquivo | Responsabilidade |
+| --- | --- |
+| `package.json` | Dependências, requisito de Node.js e scripts de desenvolvimento e verificação |
+| `package-lock.json` | Versões exatas e integridade das dependências instaladas |
+| `tsconfig.json` | Tipagem estrita, integração com Next.js e alias `@/*` para `src/*` |
+| `next.config.ts` | Raiz explícita do build e do Turbopack, evitando interferência de lockfiles externos |
+| `eslint.config.mjs` | Regras de React, hooks, Next.js e TypeScript, adaptadas ao ESLint 9 |
+| `.gitignore` | Exclusão de dependências, arquivos gerados, caches e arquivos locais de ambiente |
+| `src/app/layout.tsx` | HTML compartilhado, idioma, metadados e importação dos estilos |
+| `src/app/page.tsx` | Página inicial da rota `/`, como componente de servidor |
+| `src/app/globals.css` | Estilos básicos com fonte local e largura adaptável |
+
+O Next.js gera `next-env.d.ts` e a pasta `.next/` durante seus comandos. Esses arquivos não são editados manualmente nem versionados. A configuração do Next.js fixa a raiz no diretório do projeto porque um lockfile em uma pasta superior pode causar detecção incorreta da raiz.
+
+### Dependências e auditoria
+
+O `package.json` aplica um override de PostCSS 8.5.32 para o Next.js, que originalmente fixa uma versão antiga. Essa atualização permanece na versão principal 8 e corrige os alertas de PostCSS relatados pelo npm, incluindo [leitura de arquivos por source maps](https://github.com/advisories/GHSA-6g55-p6wh-862q).
+
+Na instalação desta etapa, `npm audit` ainda apontou 14 alertas moderados na cadeia de desenvolvimento do ESLint, originados em [minimatch](https://github.com/advisories/GHSA-g3hv-75wg-m249). Não foi forçada uma mudança principal de dependência transitiva. O ESLint 9 também está fora de suporte; a configuração do Next.js 15 utilizada declara compatibilidade até essa versão. Essas limitações devem ser reavaliadas ao atualizar a base.
 
 ## Escolhas
 
@@ -14,7 +58,7 @@ Desafio prático com Next.js 15, TypeScript e tRPC. Esta primeira etapa document
 
 ## Estrutura planejada
 
-As pastas e arquivos abaixo serão criados gradualmente, com explicação individual.
+As pastas e arquivos abaixo serão criados gradualmente, com explicação individual. `layout.tsx`, `page.tsx` e `globals.css` já existem na base.
 
 ```text
 src/
@@ -82,22 +126,22 @@ Cada linha é um item independente. As branches seguintes partem da etapa anteri
 
 | Branch | Entrega |
 | --- | --- |
-| `codex/00-arquitetura` | Regras de colaboração e arquitetura documentada |
-| `codex/01-base-next` | Projeto Next.js 15, TypeScript, lint e página inicial mínima |
-| `codex/02-integracao-trpc` | Rota HTTP, router mínimo e providers, com verificação de comunicação |
-| `codex/03-crud-tarefas` | Modelo, armazenamento, procedures e testes de validação e erros |
-| `codex/04-listagem-ssr` | Listagem dinâmica renderizada no servidor e estado vazio |
-| `codex/05-exclusao` | Exclusão pela lista, carregamento e feedback |
-| `codex/06-criacao` | Formulário, validação e criação com feedback |
-| `codex/07-edicao` | Reutilização do formulário e tratamento de tarefa inexistente |
-| `codex/08-infinite-scroll` | Bônus: paginação por cursor e carregamento incremental |
-| `codex/09-documentacao` | Instruções finais de execução e revisão dos fluxos |
+| `docs/00-arquitetura` | Regras de colaboração e arquitetura documentada |
+| `feat/01-base-next` | Projeto Next.js 15, TypeScript, lint e página inicial mínima |
+| `feat/02-integracao-trpc` | Rota HTTP, router mínimo e providers, com verificação de comunicação |
+| `feat/03-crud-tarefas` | Modelo, armazenamento, procedures e testes de validação e erros |
+| `feat/04-listagem-ssr` | Listagem dinâmica renderizada no servidor e estado vazio |
+| `feat/05-exclusao` | Exclusão pela lista, carregamento e feedback |
+| `feat/06-criacao` | Formulário, validação e criação com feedback |
+| `feat/07-edicao` | Reutilização do formulário e tratamento de tarefa inexistente |
+| `feat/08-infinite-scroll` | Bônus: paginação por cursor e carregamento incremental |
+| `docs/09-documentacao` | Instruções finais de execução e revisão dos fluxos |
 
 Para o bônus, `listar` ganhará paginação por cursor com ordem estável. A primeira página continuará sendo carregada no servidor. Um `IntersectionObserver` solicitará a página seguinte, respeitando estados de carregamento e fim da lista; um botão permitirá tentar novamente após falhas.
 
 ## Verificação por etapa
 
-A base terá verificação de tipos, lint e build. O CRUD terá testes para título vazio, criação, atualização, exclusão e IDs inexistentes. Os fluxos da interface serão verificados conforme forem implementados, incluindo erros e SSR. Os comandos de instalação e execução serão documentados junto com a base executável.
+A base dispõe de verificação de tipos, lint e build pelos scripts acima. O CRUD terá testes para título vazio, criação, atualização, exclusão e IDs inexistentes. Os fluxos da interface serão verificados conforme forem implementados, incluindo erros e SSR.
 
 ## Referências
 
