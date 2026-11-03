@@ -1,0 +1,72 @@
+// @vitest-environment jsdom
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { Tarefa } from "@/shared/tarefa";
+import { ListaTarefas } from "./lista-tarefas";
+
+const api = vi.hoisted(() => ({ listar: vi.fn() }));
+
+vi.mock("@/trpc/client", () => ({
+  useTRPC: () => ({
+    tarefas: {
+      listar: {
+        queryOptions: () => ({ queryKey: ["tarefas"], queryFn: api.listar }),
+        queryKey: () => ["tarefas"],
+      },
+    },
+  }),
+}));
+
+const tarefa: Tarefa = {
+  id: "a3d08168-87a6-4b41-b488-96c8375ac2ee",
+  titulo: "Preparar entrevista", descricao: "Revisar tRPC",
+  dataCriacao: Date.parse("2026-11-03T12:00:00Z"),
+};
+
+function renderLista(tarefas: Tarefa[] = [tarefa]) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <ListaTarefas tarefasIniciais={tarefas} />
+    </QueryClientProvider>,
+  );
+}
+
+afterEach(cleanup);
+beforeEach(() => {
+  api.listar.mockReset();
+  api.listar.mockResolvedValue([tarefa]);
+});
+
+describe("listagem de tarefas", () => {
+  it("mostra os dados iniciais sem aguardar uma consulta do navegador", () => {
+    renderLista();
+    expect(screen.getByRole("heading", { name: tarefa.titulo })).toBeTruthy();
+    expect(screen.getByText("Revisar tRPC")).toBeTruthy();
+    expect(screen.getByText(/03\/11\/2026, 09:00/)).toBeTruthy();
+    expect(api.listar).not.toHaveBeenCalled();
+  });
+
+  it("mostra o estado vazio", () => {
+    renderLista([]);
+    expect(screen.getByText("Nenhuma tarefa cadastrada.")).toBeTruthy();
+  });
+
+  it("atualiza a lista com o resultado da API", async () => {
+    api.listar.mockResolvedValue([]);
+    renderLista();
+    await userEvent.click(screen.getByRole("button", { name: "Atualizar lista" }));
+    await screen.findByText("Nenhuma tarefa cadastrada.");
+    expect(screen.queryByRole("heading", { name: tarefa.titulo })).toBeNull();
+  });
+
+  it("preserva os dados e mostra feedback quando a atualização falha", async () => {
+    api.listar.mockRejectedValue(new Error("Falha na rede"));
+    renderLista();
+    await userEvent.click(screen.getByRole("button", { name: "Atualizar lista" }));
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("Não foi possível atualizar"));
+    expect(screen.getByRole("heading", { name: tarefa.titulo })).toBeTruthy();
+  });
+});
