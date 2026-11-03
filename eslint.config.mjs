@@ -14,6 +14,7 @@ const config = [
   {
     files: [
       "src/features/*/components/**/*.{ts,tsx}",
+      "src/components/**/*.{ts,tsx}",
       "src/lib/trpc/**/*.{ts,tsx}",
       "src/app/providers.tsx",
     ],

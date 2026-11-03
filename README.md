@@ -5,6 +5,8 @@ A task manager built with Next.js 15, TypeScript and tRPC. Source code, API fiel
 ## Features
 
 - In-memory CRUD API with Zod validation and readable errors.
+- Unique task titles on creation and editing, comparing trimmed text without case sensitivity.
+- Error toasts for failed tRPC queries and mutations.
 - Dynamic server-rendered task list, including tasks in the initial HTML.
 - Deletion with loading, success and failure feedback.
 - Task creation at `/tasks/new`, with shared input validation, pending state and error feedback.
@@ -46,7 +48,7 @@ Forms preserve input after errors and prevent duplicate submissions while pendin
 
 ## Test coverage
 
-The suite contains 74 tests across 10 files. It uses Vitest with a Node.js environment for backend tests and jsdom with Testing Library for component tests.
+The suite contains 82 tests across 12 files. It uses Vitest with a Node.js environment for backend tests and jsdom with Testing Library for component tests.
 
 | Area | Verified behavior |
 | --- | --- |
@@ -57,6 +59,7 @@ The suite contains 74 tests across 10 files. It uses Vitest with a Node.js envir
 | Task list | Initial data, reload after deletion, empty state, deletion feedback, duplicate request prevention, incremental loading and retry |
 | Form and mutations | Controlled fields, normalization, optional description, preserved input, cache reset and success navigation |
 | Server pages | Tasks in the initial HTML, preloaded edit data and missing-task handling |
+| Error toasts | Backend conflicts during creation and editing, failed deletion, query connection errors, dismissal and timeout |
 
 Component tests mock API responses while exercising the actual form and TanStack Query state. Backend tests use fresh stores rather than shared fixtures. HTTP adapter tests use real tRPC client requests against the Fetch adapter without opening network ports.
 
@@ -77,9 +80,14 @@ src/
     page.test.tsx
     layout.tsx                # Shared HTML and metadata
     providers.tsx             # Application-wide client providers
+    providers.test.tsx         # tRPC error toast integration tests
     error.tsx                 # Render error boundary
     not-found.tsx             # Missing page or task
     globals.css
+  components/
+    ui/
+      toast.tsx               # Shared accessible error toast
+      toast.test.tsx
   features/
     tasks/
       components/
@@ -108,6 +116,7 @@ src/
 ### Dependency boundaries
 
 - `app` defines URLs and composes feature components with server-side data. Client providers live at this composition boundary.
+- `components/ui` contains the shared error toast used by application providers.
 - `features/tasks/components` handles task interactions and uses the typed tRPC client for runtime server access.
 - `features/tasks/schemas` defines the shared contract. Types are inferred from Zod rather than duplicated in a separate model layer.
 - `features/tasks/server` owns task procedures and storage. Both modules use `server-only` to prevent accidental browser imports.
@@ -119,6 +128,8 @@ ESLint restricts aliased server implementation imports in client modules and pre
 Tests live next to their modules. Imports point directly to the required module, keeping client/server boundaries visible. There are no empty generic component folders or repository/service interfaces for the single in-memory implementation.
 
 The server page invokes tRPC through a direct caller, avoiding a loopback HTTP request. Browser requests use `/api/trpc`. The home page is directly under `app/page.tsx`; loading feedback is managed by query, mutation and form navigation state. The editing route can return HTTP 404 before any loading boundary starts streaming.
+
+The query and mutation caches notify the shared toast when a client operation fails. Backend messages are preserved; connection failures use a readable Portuguese message. Forms retain their input and field-level validation. The toast can be dismissed and expires after five seconds.
 
 Square-bracket folders are reserved for the Next.js dynamic route conventions: `[id]` receives the task identifier and `[trpc]` receives the procedure path. There are no optional route groups.
 
@@ -133,7 +144,7 @@ The project uses plain CSS and system fonts. TypeScript runs in strict mode. The
 | Field | Type | Rule |
 | --- | --- | --- |
 | `id` | `string` | Server-generated UUID; immutable |
-| `title` | `string` | Required after trimming whitespace |
+| `title` | `string` | Required and unique after trimming whitespace, without case sensitivity |
 | `description` | `string`, optional | Empty values are normalized to absence |
 | `createdAt` | `number` | Server-generated Unix timestamp in milliseconds; immutable |
 

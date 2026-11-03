@@ -159,3 +159,20 @@ textarea {
 .scroll-sentinel {
   height: 1px;
 }
+
+.toast {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  max-width: min(28rem, calc(100vw - 2rem));
+  box-shadow: 0 4px 16px #17203333;
+}
+
+.toast p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
