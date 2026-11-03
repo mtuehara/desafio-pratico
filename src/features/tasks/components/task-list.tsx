@@ -52,12 +52,8 @@ export function TaskList({ initialPage, successMessage }: {
 
   return (
     <section aria-label="Lista de tarefas">
-      <div className="toolbar">
-        <h2>Suas tarefas</h2>
-        <button className="secondary" onClick={() => void query.refetch()} disabled={query.isFetching}>
-          {query.isFetching ? "Atualizando…" : "Atualizar lista"}
-        </button>
-      </div>
+      <h2 className="task-list-heading">Suas tarefas</h2>
+      {isFetching && !query.isFetchingNextPage && <p role="status">Carregando tarefas…</p>}
       {query.isError && <p role="alert">{query.isFetchNextPageError
         ? "Não foi possível carregar mais tarefas. Tente novamente."
         : "Não foi possível atualizar as tarefas. Tente novamente."}</p>}

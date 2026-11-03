@@ -7,7 +7,7 @@ vi.mock("server-only", () => ({}));
 
 describe("tRPC integration", () => {
   it("supports direct server calls", async () => {
-    await expect(appRouter.createCaller({}).status()).resolves.toEqual({ ok: true });
+    await expect(appRouter.createCaller({}).tasks.list()).resolves.toEqual([]);
   });
 
   it("connects the typed client to the HTTP adapter", async () => {
@@ -20,7 +20,7 @@ describe("tRPC integration", () => {
       ],
     });
 
-    await expect(client.status.query()).resolves.toEqual({ ok: true });
+    await expect(client.tasks.list.query()).resolves.toEqual([]);
   });
 
   it("returns 404 for an unknown procedure", async () => {

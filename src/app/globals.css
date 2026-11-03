@@ -78,7 +78,11 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
   color: #15562c;
 }
 
-.toolbar, .actions {
+.task-list-heading {
+  margin: 1.5rem 0;
+}
+
+.actions {
   display: flex;
   align-items: center;
   justify-content: space-between;

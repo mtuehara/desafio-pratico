@@ -41,13 +41,12 @@ Run `build` before `start`. Use `npm run test:watch` while developing. The lockf
 2. Enter a title and an optional description, then select **Criar tarefa**.
 3. Select **Editar** on a task to update it, or **Excluir** to remove it.
 4. After adding more than 10 tasks, scroll down or select **Carregar mais** to load another page.
-5. Use **Atualizar lista** to retrieve changes made from another tab.
 
 Forms preserve input after errors and prevent duplicate submissions while pending. Successful creation and editing return to the list with feedback. A missing task shows a not-found page with a link back to the list.
 
 ## Test coverage
 
-The suite contains 65 tests across 10 files. It uses Vitest with a Node.js environment for backend tests and jsdom with Testing Library for component tests.
+The suite contains 64 tests across 10 files. It uses Vitest with a Node.js environment for backend tests and jsdom with Testing Library for component tests.
 
 | Area | Verified behavior |
 | --- | --- |
@@ -55,7 +54,7 @@ The suite contains 65 tests across 10 files. It uses Vitest with a Node.js envir
 | In-memory store | Unique IDs, timestamps, stable ordering, defensive copies, updates, deletion and instance isolation |
 | tRPC procedures | Complete CRUD lifecycle, rejected writes, meaningful errors and stable cursor pagination after concurrent list changes |
 | HTTP adapter | Typed client communication, readable validation errors and unknown procedures |
-| Task list | Initial data, refresh, empty state, deletion feedback, duplicate request prevention, incremental loading and retry |
+| Task list | Initial data, reload after deletion, empty state, deletion feedback, duplicate request prevention, incremental loading and retry |
 | Form and mutations | Controlled fields, normalization, optional description, preserved input, cache reset and success navigation |
 | Server pages | Tasks in the initial HTML, preloaded edit data and missing-task handling |
 
@@ -84,7 +83,7 @@ src/
   features/
     tasks/
       components/
-        task-list.tsx         # Pagination, refresh and deletion
+        task-list.tsx         # Pagination and deletion
         task-form.tsx         # Controlled fields and validation
         create-task.tsx       # Creation mutation and navigation
         edit-task.tsx         # Update mutation and navigation
@@ -140,7 +139,6 @@ The project uses plain CSS and system fonts. TypeScript runs in strict mode. The
 
 | Procedure | Type | Input |
 | --- | --- | --- |
-| `status` | query | None |
 | `tasks.list` | query | None |
 | `tasks.listPage` | query | `{ limit?, cursor?: { createdAt, id } }` |
 | `tasks.getById` | query | `{ id }` |

@@ -63,20 +63,14 @@ describe("task list", () => {
     expect(screen.getByText("Nenhuma tarefa cadastrada.")).toBeTruthy();
   });
 
-  it("refreshes the list with API results", async () => {
-    api.list.mockResolvedValue({ items: [] });
-    renderTaskList();
-    await userEvent.click(screen.getByRole("button", { name: "Atualizar lista" }));
-    await screen.findByText("Nenhuma tarefa cadastrada.");
-    expect(screen.queryByRole("heading", { name: task.title })).toBeNull();
-  });
-
-  it("preserves existing data and reports a failed refresh", async () => {
+  it("preserves remaining tasks when reloading after deletion fails", async () => {
+    const remaining = { ...task, id: "b3d08168-87a6-4b41-b488-96c8375ac2ee", title: "Remaining task" };
     api.list.mockRejectedValue(new Error("Falha na rede"));
-    renderTaskList();
-    await userEvent.click(screen.getByRole("button", { name: "Atualizar lista" }));
+    renderTaskList([task, remaining]);
+    await userEvent.click(screen.getByRole("button", { name: `Excluir ${task.title}` }));
     await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("Não foi possível atualizar"));
-    expect(screen.getByRole("heading", { name: task.title })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: remaining.title })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: task.title })).toBeNull();
   });
 
   it("removes the card and reports a successful deletion", async () => {
