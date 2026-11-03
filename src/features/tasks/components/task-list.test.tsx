@@ -15,7 +15,7 @@ vi.mock("@/lib/trpc/client", () => ({
       listPage: {
         infiniteQueryOptions: (_input: unknown, options: object) => ({
           ...options, queryKey: ["tasks"], initialPageParam: null,
-          queryFn: ({ pageParam }: { pageParam?: TaskCursor | null }) => api.list({ cursor: pageParam ?? undefined }),
+          queryFn: ({ pageParam }: { pageParam?: TaskCursor | null }) => api.list({ cursor: pageParam }),
         }),
         infiniteQueryKey: () => ["tasks"],
       },

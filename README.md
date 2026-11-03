@@ -92,7 +92,7 @@ The first page contains up to 10 tasks. Further pages use a cursor containing cr
 | `tasks.update` | mutation | `{ id, title, description? }` |
 | `tasks.delete` | mutation | `{ id }` |
 
-`getById` supports loading the edit form. `listPage` supports infinite scroll and returns `{ items, nextCursor? }`. Page size defaults to 10 and accepts integers from 1 to 50.
+`getById` supports loading the edit form. `listPage` supports infinite scroll and returns `{ items, nextCursor? }`. Page size defaults to 10 and accepts integers from 1 to 50. An omitted or null cursor requests the first page, including refetches after a mutation.
 
 The tRPC error formatter preserves standard codes and HTTP status mappings, including `CONFLICT`/409, and hides unexpected internal error messages. Client query and mutation errors reach the shared toast. Connection failures use a readable message, and local form validation remains inline.
 

@@ -12,6 +12,11 @@ describe("task procedures", () => {
     caller = createTasksRouter(createTaskStore()).createCaller({});
   });
 
+  it("accepts a null cursor when reloading the first page", async () => {
+    await caller.create({ title: "First-page task" });
+    expect(await caller.listPage({ cursor: null })).toEqual(await caller.listPage({}));
+  });
+
   it.each(["Study", " study ", "STUDY"])("allows repeated titles while generating unique IDs: %s", async (title) => {
     const existing = await caller.create({ title: "Study" });
     const created = await caller.create({ title });

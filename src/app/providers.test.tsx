@@ -2,17 +2,18 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { TRPCError } from "@trpc/server";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GET } from "@/app/api/trpc/[trpc]/route";
 import { CreateTask } from "@/features/tasks/components/create-task";
+import { CreateRandomTasksButton } from "@/features/tasks/components/create-random-tasks-button";
 import { EditTask } from "@/features/tasks/components/edit-task";
 import { TaskList } from "@/features/tasks/components/task-list";
 import { useTRPC } from "@/lib/trpc/client";
 import { appRouter } from "@/server/api/root";
 import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
-import { taskInputSchema, updateTaskSchema } from "@/features/tasks/schemas/task.schema";
+import { taskInputSchema, updateTaskSchema, type Task } from "@/features/tasks/schemas/task.schema";
 import { AppProviders } from "./providers";
 
 const navigation = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
@@ -47,6 +48,52 @@ function QueryFailureTrigger() {
 }
 
 describe("tRPC error toasts", () => {
+  it("reloads the infinite list after creating ten random tasks without a cursor error", async () => {
+    const caller = appRouter.createCaller({});
+    const existingIds = new Set((await caller.tasks.list()).map((task) => task.id));
+    try {
+      const initialPage = await caller.tasks.listPage({ limit: 10 });
+      render(<AppProviders><CreateRandomTasksButton /><TaskList initialPage={initialPage} /></AppProviders>);
+      await userEvent.click(screen.getByRole("button", { name: "Criar 10 tarefas aleatórias" }));
+      await screen.findByText("10 tarefas aleatórias criadas.");
+      await waitFor(() => expect(screen.getAllByRole("listitem")).toHaveLength(10));
+      expect(screen.queryByRole("alert")).toBeNull();
+    } finally {
+      for (const task of await caller.tasks.list()) {
+        if (!existingIds.has(task.id)) await caller.tasks.delete({ id: task.id });
+      }
+    }
+  });
+
+  it("reloads SSR-seeded pages after deletion without a null cursor error", async () => {
+    const caller = appRouter.createCaller({});
+    const created: Task[] = [];
+    try {
+      for (let index = 0; index < 12; index++) {
+        created.push(await caller.tasks.create({ title: `Paged deletion task ${index}` }));
+      }
+      const initialPage = await caller.tasks.listPage({ limit: 10 });
+      const ordered = await caller.tasks.list();
+      const lastTask = ordered[ordered.length - 1];
+      const deleted = initialPage.items[0];
+      render(<AppProviders><TaskList initialPage={initialPage} /></AppProviders>);
+      await userEvent.click(screen.getByRole("button", { name: "Carregar mais" }));
+      await screen.findByRole("heading", { name: lastTask.title });
+      await userEvent.click(screen.getByRole("button", { name: `Excluir ${deleted.title}` }));
+      await screen.findByText("Tarefa excluída com sucesso.", {}, { timeout: 4000 });
+      expect(screen.queryByRole("alert", { name: "Erro" })).toBeNull();
+      expect(screen.queryByRole("alert")).toBeNull();
+      expect(screen.getAllByRole("listitem")).toHaveLength(11);
+      expect(screen.getByRole("heading", { name: lastTask.title })).toBeTruthy();
+      expect(screen.queryByRole("heading", { name: deleted.title })).toBeNull();
+    } finally {
+      const remainingIds = new Set((await caller.tasks.list()).map((task) => task.id));
+      for (const task of created) {
+        if (remainingIds.has(task.id)) await caller.tasks.delete({ id: task.id });
+      }
+    }
+  });
+
   it("shows a future conflict response without requiring unique task titles", async () => {
     respondWithConflict();
     render(<AppProviders><CreateTask /></AppProviders>);
