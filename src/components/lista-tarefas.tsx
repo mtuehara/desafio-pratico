@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Tarefa } from "@/shared/tarefa";
 import { useTRPC } from "@/trpc/client";
 
@@ -10,10 +10,19 @@ const formatarData = new Intl.DateTimeFormat("pt-BR", {
 
 export function ListaTarefas({ tarefasIniciais }: { tarefasIniciais: Tarefa[] }) {
   const trpc = useTRPC();
+  const queryClient = useQueryClient();
   const query = useQuery({
     ...trpc.tarefas.listar.queryOptions(),
     initialData: tarefasIniciais,
   });
+  const deletar = useMutation(trpc.tarefas.deletar.mutationOptions({
+    onSuccess: async ({ id }) => {
+      queryClient.setQueryData(trpc.tarefas.listar.queryKey(), (tarefas) =>
+        tarefas?.filter((tarefa) => tarefa.id !== id),
+      );
+      await queryClient.invalidateQueries({ queryKey: trpc.tarefas.listar.queryKey() });
+    },
+  }));
 
   return (
     <section aria-label="Lista de tarefas">
@@ -24,6 +33,8 @@ export function ListaTarefas({ tarefasIniciais }: { tarefasIniciais: Tarefa[] })
         </button>
       </div>
       {query.isError && <p role="alert">Não foi possível atualizar as tarefas. Tente novamente.</p>}
+      {deletar.isError && <p role="alert">{deletar.error.message || "Não foi possível excluir a tarefa."}</p>}
+      {deletar.isSuccess && <p role="status">Tarefa excluída com sucesso.</p>}
       {query.data.length === 0 ? (
         <p className="empty">Nenhuma tarefa cadastrada.</p>
       ) : (
@@ -35,6 +46,16 @@ export function ListaTarefas({ tarefasIniciais }: { tarefasIniciais: Tarefa[] })
               <time dateTime={new Date(tarefa.dataCriacao).toISOString()} title="Horário de Brasília">
                 Criada em {formatarData.format(tarefa.dataCriacao)}
               </time>
+              <div className="actions">
+                <button
+                  className="danger"
+                  aria-label={`Excluir ${tarefa.titulo}`}
+                  disabled={deletar.isPending}
+                  onClick={() => deletar.mutate({ id: tarefa.id })}
+                >
+                  {deletar.isPending && deletar.variables.id === tarefa.id ? "Excluindo…" : "Excluir"}
+                </button>
+              </div>
             </li>
           ))}
         </ul>
