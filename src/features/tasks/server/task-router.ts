@@ -9,6 +9,16 @@ function taskNotFound(): never {
   throw new TRPCError({ code: "NOT_FOUND", message: "Tarefa não encontrada." });
 }
 
+function ensureUniqueTitle(store: TaskStore, title: string, currentId?: string): void {
+  const normalizedTitle = title.trim().toLocaleLowerCase("pt-BR");
+  const duplicate = store.list().some((task) =>
+    task.id !== currentId && task.title.trim().toLocaleLowerCase("pt-BR") === normalizedTitle,
+  );
+  if (duplicate) {
+    throw new TRPCError({ code: "CONFLICT", message: "Já existe uma tarefa com esse título." });
+  }
+}
+
 export function createTasksRouter(store: TaskStore) {
   return createTRPCRouter({
     list: publicProcedure.query(() => store.list()),
@@ -32,11 +42,16 @@ export function createTasksRouter(store: TaskStore) {
       store.getById(input.id) ?? taskNotFound(),
     ),
 
-    create: publicProcedure.input(taskInputSchema).mutation(({ input }) => store.create(input)),
+    create: publicProcedure.input(taskInputSchema).mutation(({ input }) => {
+      ensureUniqueTitle(store, input.title);
+      return store.create(input);
+    }),
 
-    update: publicProcedure.input(updateTaskSchema).mutation(({ input }) =>
-      store.update(input.id, input) ?? taskNotFound(),
-    ),
+    update: publicProcedure.input(updateTaskSchema).mutation(({ input }) => {
+      if (!store.getById(input.id)) taskNotFound();
+      ensureUniqueTitle(store, input.title, input.id);
+      return store.update(input.id, input) ?? taskNotFound();
+    }),
 
     delete: publicProcedure.input(taskIdSchema).mutation(({ input }) => {
       if (!store.delete(input.id)) taskNotFound();

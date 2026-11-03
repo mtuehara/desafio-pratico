@@ -46,7 +46,7 @@ Forms preserve input after errors and prevent duplicate submissions while pendin
 
 ## Test coverage
 
-The suite contains 64 tests across 10 files. It uses Vitest with a Node.js environment for backend tests and jsdom with Testing Library for component tests.
+The suite contains 74 tests across 10 files. It uses Vitest with a Node.js environment for backend tests and jsdom with Testing Library for component tests.
 
 | Area | Verified behavior |
 | --- | --- |
@@ -146,7 +146,7 @@ The project uses plain CSS and system fonts. TypeScript runs in strict mode. The
 | `tasks.update` | mutation | `{ id, title, description? }` |
 | `tasks.delete` | mutation | `{ id }` |
 
-Updates replace editable fields; omitting the description clears it. Invalid inputs return `BAD_REQUEST`. Reading, updating or deleting an unknown UUID returns `NOT_FOUND`. Internal errors use a generic response message.
+Updates replace editable fields; omitting the description clears it. Invalid inputs return `BAD_REQUEST`. Reading, updating or deleting an unknown UUID returns `NOT_FOUND`. Duplicate titles return `CONFLICT` (HTTP 409) on creation and editing, comparing trimmed text without case sensitivity. Updating a task may keep its own title. Failed writes preserve existing data. Internal errors use a generic response message.
 
 Page size defaults to 10 and accepts integers from 1 to 50. `listPage` returns `{ items, nextCursor? }`; an absent cursor means there are no more results.
 

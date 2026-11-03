@@ -12,6 +12,37 @@ describe("task procedures", () => {
     caller = createTasksRouter(createTaskStore()).createCaller({});
   });
 
+  it.each(["Study", " study ", "STUDY"])("rejects a duplicate title when creating: %s", async (title) => {
+    const existing = await caller.create({ title: "Study" });
+    await expect(caller.create({ title })).rejects.toMatchObject({
+      code: "CONFLICT", message: "Já existe uma tarefa com esse título.",
+    });
+    expect(await caller.list()).toEqual([existing]);
+  });
+
+  it.each(["First", " first ", "FIRST"])("rejects another task's title when updating: %s", async (title) => {
+    await caller.create({ title: "First" });
+    const original = await caller.create({ title: "Second", description: "Original description" });
+    await expect(caller.update({ id: original.id, title })).rejects.toMatchObject({ code: "CONFLICT" });
+    expect(await caller.getById({ id: original.id })).toEqual(original);
+  });
+
+  it("allows updating a task while keeping its own title", async () => {
+    const original = await caller.create({ title: "Study" });
+    const updated = await caller.update({ id: original.id, title: "  STUDY  ", description: "Updated" });
+    expect(updated).toMatchObject({ id: original.id, title: "STUDY", description: "Updated", createdAt: original.createdAt });
+    expect(await caller.list()).toHaveLength(1);
+  });
+
+  it("accepts only one of two concurrent creates with the same title", async () => {
+    const results = await Promise.allSettled([
+      caller.create({ title: "Study" }), caller.create({ title: "study" }),
+    ]);
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect(results.find((result) => result.status === "rejected")).toMatchObject({ reason: { code: "CONFLICT" } });
+    expect(await caller.list()).toHaveLength(1);
+  });
+
   it("creates, lists, finds, updates and deletes a task", async () => {
     expect(await caller.list()).toEqual([]);
     const created = await caller.create({ title: "  Estudar  ", description: "  Next.js  " });
