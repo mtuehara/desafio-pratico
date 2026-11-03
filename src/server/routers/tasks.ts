@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { updateTaskSchema, taskIdSchema, taskInputSchema } from "@/shared/task";
+import { updateTaskSchema, taskIdSchema, taskInputSchema, taskPageInputSchema, type TaskPage } from "@/shared/task";
 import type { TaskStore } from "../task-store";
 import { createTRPCRouter, publicProcedure } from "../trpc";
 
@@ -10,6 +10,21 @@ function taskNotFound(): never {
 export function createTasksRouter(store: TaskStore) {
   return createTRPCRouter({
     list: publicProcedure.query(() => store.list()),
+
+    listPage: publicProcedure.input(taskPageInputSchema).query(({ input }): TaskPage => {
+      const { cursor, limit } = input;
+      // Compare the ordering tuple instead of looking up a cursor task that may have been deleted.
+      const remaining = store.list().filter((task) => !cursor ||
+        task.createdAt < cursor.createdAt ||
+        (task.createdAt === cursor.createdAt && task.id.localeCompare(cursor.id) > 0),
+      );
+      const items = remaining.slice(0, limit);
+      const last = items.at(-1);
+      return {
+        items,
+        nextCursor: remaining.length > limit && last ? { createdAt: last.createdAt, id: last.id } : undefined,
+      };
+    }),
 
     getById: publicProcedure.input(taskIdSchema).query(({ input }) =>
       store.getById(input.id) ?? taskNotFound(),

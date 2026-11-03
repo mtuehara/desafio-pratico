@@ -16,7 +16,7 @@ export function CreateTask() {
   return (
     <TaskForm submitLabel="Criar tarefa" disabled={isNavigating} onSubmit={async (data) => {
       await create.mutateAsync(data);
-      queryClient.removeQueries({ queryKey: trpc.tasks.list.queryKey() });
+      queryClient.removeQueries({ queryKey: trpc.tasks.pathKey() });
       startTransition(() => { router.push("/?success=created"); router.refresh(); });
     }} />
   );

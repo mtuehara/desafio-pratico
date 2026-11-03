@@ -9,6 +9,7 @@ A task manager built with Next.js 15, TypeScript and tRPC. Source code, API fiel
 - Deletion with loading, success and failure feedback.
 - Task creation at `/tasks/new`, with shared input validation, pending state and error feedback.
 - Task editing at `/tasks/[id]/edit`, reusing the form and handling missing tasks.
+- Infinite scroll with 10 tasks per page, an accessible manual loading button, and retry after failure.
 - Unit tests for schemas, storage and procedures; component tests for the list; integration tests for HTTP communication and server rendering.
 
 All required CRUD pages are implemented.
@@ -52,6 +53,8 @@ Tests live next to their modules as `.test.ts` or `.test.tsx` files. The server 
 
 Deletion removes a task from the cache only after success and then invalidates the query. Failures preserve existing data. Dates use an explicit `America/Sao_Paulo` time zone to keep server and browser output consistent.
 
+The server renders the first page. `useInfiniteQuery` appends subsequent pages, and an `IntersectionObserver` requests more tasks near the viewport. The cursor contains the creation timestamp and ID, so deleting the cursor task does not break pagination. Failed requests preserve loaded pages and require a manual retry. Newly inserted tasks appear on refresh rather than shifting existing pages.
+
 The project uses plain CSS and system fonts. TypeScript runs in strict mode. The Next.js configuration pins the project root to prevent external lockfiles from affecting build tracing or Turbopack.
 
 ## API contract
@@ -67,12 +70,15 @@ The project uses plain CSS and system fonts. TypeScript runs in strict mode. The
 | --- | --- | --- |
 | `status` | query | None |
 | `tasks.list` | query | None |
+| `tasks.listPage` | query | `{ limit?, cursor?: { createdAt, id } }` |
 | `tasks.getById` | query | `{ id }` |
 | `tasks.create` | mutation | `{ title, description? }` |
 | `tasks.update` | mutation | `{ id, title, description? }` |
 | `tasks.delete` | mutation | `{ id }` |
 
 Updates replace editable fields; omitting the description clears it. Invalid inputs return `BAD_REQUEST`. Reading, updating or deleting an unknown UUID returns `NOT_FOUND`. Internal errors use a generic response message.
+
+Page size defaults to 10 and accepts integers from 1 to 50. `listPage` returns `{ items, nextCursor? }`; an absent cursor means there are no more results.
 
 ## Storage limitations
 

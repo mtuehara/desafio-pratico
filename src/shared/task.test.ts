@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { updateTaskSchema, taskIdSchema, taskInputSchema } from "./task";
+import { updateTaskSchema, taskIdSchema, taskInputSchema, taskPageInputSchema } from "./task";
 
 describe("task validation", () => {
+  it.each([0, -1, 51, 1.5])("rejects an invalid page size: %s", (limit) => {
+    expect(taskPageInputSchema.safeParse({ limit }).success).toBe(false);
+  });
+
+  it("rejects a malformed cursor", () => {
+    expect(taskPageInputSchema.safeParse({ cursor: { id: "invalid", createdAt: -1 } }).success).toBe(false);
+  });
+
   it.each([undefined, null, "", "   ", "\n\t", 123])("rejects an invalid title: %s", (title) => {
     expect(taskInputSchema.safeParse({ title }).success).toBe(false);
   });

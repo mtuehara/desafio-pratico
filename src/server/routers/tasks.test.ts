@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createTaskStore } from "../task-store";
 import { createTasksRouter } from "./tasks";
 
@@ -51,5 +51,47 @@ describe("task procedures", () => {
 
   it("returns NOT_FOUND when deleting a missing task", async () => {
     await expect(caller.delete({ id: randomUUID() })).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  it("paginates equal timestamps without duplicates or missing tasks", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(1000);
+    for (let index = 0; index < 5; index++) await caller.create({ title: `Task ${index}` });
+    const all = await caller.list();
+    const first = await caller.listPage({ limit: 2 });
+    const second = await caller.listPage({ limit: 2, cursor: first.nextCursor });
+    const third = await caller.listPage({ limit: 2, cursor: second.nextCursor });
+    expect([...first.items, ...second.items, ...third.items]).toEqual(all);
+    expect(third.nextCursor).toBeUndefined();
+  });
+
+  it("continues after the cursor task has been deleted", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(1000);
+    for (let index = 0; index < 5; index++) await caller.create({ title: `Task ${index}` });
+    const all = await caller.list();
+    const first = await caller.listPage({ limit: 2 });
+    await caller.delete({ id: first.items[1].id });
+    const second = await caller.listPage({ limit: 2, cursor: first.nextCursor });
+    expect(second.items).toEqual(all.slice(2, 4));
+  });
+
+  it("does not repeat earlier pages when a newer task is inserted", async () => {
+    const clock = vi.spyOn(Date, "now").mockReturnValue(1000);
+    for (let index = 0; index < 4; index++) await caller.create({ title: `Task ${index}` });
+    const all = await caller.list();
+    const first = await caller.listPage({ limit: 2 });
+    clock.mockReturnValue(2000);
+    await caller.create({ title: "Newer task" });
+    const second = await caller.listPage({ limit: 2, cursor: first.nextCursor });
+    expect(second.items).toEqual(all.slice(2));
+    expect(second.nextCursor).toBeUndefined();
+  });
+
+  it("uses the default page size and returns an empty final cursor", async () => {
+    for (let index = 0; index < 11; index++) await caller.create({ title: `Task ${index}` });
+    const first = await caller.listPage({});
+    expect(first.items).toHaveLength(10);
+    const last = await caller.listPage({ cursor: first.nextCursor });
+    expect(last.items).toHaveLength(1);
+    expect(last.nextCursor).toBeUndefined();
   });
 });

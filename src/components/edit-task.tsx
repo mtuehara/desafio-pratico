@@ -17,7 +17,7 @@ export function EditTask({ task }: { task: Task }) {
   return (
     <TaskForm initialValues={task} submitLabel="Salvar alterações" disabled={isNavigating} onSubmit={async (data) => {
       await updateTask.mutateAsync({ id: task.id, ...data });
-      queryClient.removeQueries({ queryKey: trpc.tasks.list.queryKey() });
+      queryClient.removeQueries({ queryKey: trpc.tasks.pathKey() });
       startTransition(() => { router.push("/?success=updated"); router.refresh(); });
     }} />
   );

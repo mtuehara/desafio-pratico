@@ -10,7 +10,7 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push: api.push, refresh:
 vi.mock("@/trpc/client", () => ({
   useTRPC: () => ({ tasks: {
     create: { mutationOptions: () => ({ mutationFn: api.create }) },
-    list: { queryKey: () => ["tasks"] },
+    pathKey: () => ["tasks"],
   } }),
 }));
 
