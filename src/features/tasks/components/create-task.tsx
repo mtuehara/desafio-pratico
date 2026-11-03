@@ -3,7 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
-import { useTRPC } from "@/trpc/client";
+import { useTRPC } from "@/lib/trpc/client";
 import { TaskForm } from "./task-form";
 
 export function CreateTask() {

@@ -1,7 +1,7 @@
-import { TaskList } from "@/components/task-list";
-import { appRouter } from "@/server/router";
+import { TaskList } from "@/features/tasks/components/task-list";
+import { appRouter } from "@/server/api/root";
 import Link from "next/link";
-import { TASK_PAGE_SIZE } from "@/shared/task";
+import { TASK_PAGE_SIZE } from "@/features/tasks/schemas/task.schema";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

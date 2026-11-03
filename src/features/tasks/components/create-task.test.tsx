@@ -7,7 +7,7 @@ import { CreateTask } from "./create-task";
 
 const api = vi.hoisted(() => ({ create: vi.fn(), push: vi.fn(), refresh: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: api.push, refresh: api.refresh }) }));
-vi.mock("@/trpc/client", () => ({
+vi.mock("@/lib/trpc/client", () => ({
   useTRPC: () => ({ tasks: {
     create: { mutationOptions: () => ({ mutationFn: api.create }) },
     pathKey: () => ["tasks"],

@@ -1,7 +1,9 @@
+import "server-only";
+
 import { TRPCError } from "@trpc/server";
-import { updateTaskSchema, taskIdSchema, taskInputSchema, taskPageInputSchema, type TaskPage } from "@/shared/task";
-import type { TaskStore } from "../task-store";
-import { createTRPCRouter, publicProcedure } from "../trpc";
+import { updateTaskSchema, taskIdSchema, taskInputSchema, taskPageInputSchema, type TaskPage } from "@/features/tasks/schemas/task.schema";
+import type { TaskStore } from "./task-store";
+import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
 
 function taskNotFound(): never {
   throw new TRPCError({ code: "NOT_FOUND", message: "Tarefa não encontrada." });

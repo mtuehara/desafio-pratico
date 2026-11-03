@@ -63,21 +63,65 @@ Component tests mock API responses while exercising the actual form and TanStack
 
 ## Architecture
 
-- `src/app`: pages, document layout, styles, loading and error boundaries, and the tRPC HTTP adapter.
-- `src/app/(home)`: server-loaded home page and its loading boundary. The route group does not change the `/` URL; scoping loading here lets missing edit pages return HTTP 404 before streaming starts.
-- `src/app/tasks`: creation and server-loaded editing pages.
-- `src/components/task-list.tsx`: interactive task list, query refresh and deletion.
-- `src/components/task-form.tsx`: reusable controlled form with validation and submission feedback.
-- `src/components/create-task.tsx`: creation mutation, cache reset and navigation after success.
-- `src/components/edit-task.tsx`: update mutation, prefilled form and navigation after success.
-- `src/server/trpc.ts`: tRPC initialization and error formatting.
-- `src/server/router.ts`: root router and exported `AppRouter` type.
-- `src/server/routers/tasks.ts`: validated task procedures.
-- `src/server/task-store.ts`: process-local Map and isolated store factory.
-- `src/shared/task.ts`: input schemas and inferred types.
-- `src/trpc/client.tsx`: typed HTTP client and TanStack Query providers.
+The application uses a feature-based structure. Routes compose the task feature; task-specific code stays together; tRPC infrastructure is independent of the feature's UI.
 
-Tests live next to their modules as `.test.ts` or `.test.tsx` files. The server page invokes tRPC through a direct caller, avoiding a loopback HTTP request. Browser requests use `/api/trpc`. Client components import only the router type, keeping server implementation out of the browser bundle.
+```text
+src/
+  app/
+    api/trpc/[trpc]/route.ts   # HTTP adapter
+    tasks/
+      new/page.tsx            # Creation route
+      [id]/edit/
+        page.tsx              # Server-loaded editing route
+        page.test.tsx
+    page.tsx                  # Server-loaded task list
+    page.test.tsx
+    layout.tsx                # Shared HTML and metadata
+    providers.tsx             # Application-wide client providers
+    error.tsx                 # Render error boundary
+    not-found.tsx             # Missing page or task
+    globals.css
+  features/
+    tasks/
+      components/
+        task-list.tsx         # Pagination, refresh and deletion
+        task-form.tsx         # Controlled fields and validation
+        create-task.tsx       # Creation mutation and navigation
+        edit-task.tsx         # Update mutation and navigation
+        *.test.tsx
+      schemas/
+        task.schema.ts        # Zod schemas and inferred task types
+        task.schema.test.ts
+      server/
+        task-router.ts        # Validated task procedures
+        task-router.test.ts
+        task-store.ts         # In-memory storage and isolated factory
+        task-store.test.ts
+  lib/
+    trpc/client.ts            # Typed React context and hooks
+  server/
+    api/
+      trpc.ts                 # tRPC initialization and error formatting
+      root.ts                 # Application router composition
+      root.test.ts            # Caller and HTTP integration tests
+```
+
+### Dependency boundaries
+
+- `app` defines URLs and composes feature components with server-side data. Client providers live at this composition boundary.
+- `features/tasks/components` handles task interactions and uses the typed tRPC client for runtime server access.
+- `features/tasks/schemas` defines the shared contract. Types are inferred from Zod rather than duplicated in a separate model layer.
+- `features/tasks/server` owns task procedures and storage. Both modules use `server-only` to prevent accidental browser imports.
+- `server/api` initializes tRPC and registers feature routers. It does not contain task-specific storage or UI.
+- `lib/trpc` exposes the typed client context. Its server router import is type-only and is erased from the browser bundle.
+
+ESLint restricts aliased server implementation imports in client modules and prevents schemas from importing UI, transport or server implementation. Unit tests mock the `server-only` marker while exercising the real backend modules in Node.js.
+
+Tests live next to their modules. Imports point directly to the required module, keeping client/server boundaries visible. There are no empty generic component folders or repository/service interfaces for the single in-memory implementation.
+
+The server page invokes tRPC through a direct caller, avoiding a loopback HTTP request. Browser requests use `/api/trpc`. The home page is directly under `app/page.tsx`; loading feedback is managed by query, mutation and form navigation state. The editing route can return HTTP 404 before any loading boundary starts streaming.
+
+Square-bracket folders are reserved for the Next.js dynamic route conventions: `[id]` receives the task identifier and `[trpc]` receives the procedure path. There are no optional route groups.
 
 Deletion removes a task from the cache only after success and then invalidates the query. Failures preserve existing data. Dates use an explicit `America/Sao_Paulo` time zone to keep server and browser output consistent.
 

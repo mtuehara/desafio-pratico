@@ -1,7 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createTaskStore } from "../task-store";
-import { createTasksRouter } from "./tasks";
+import { createTaskStore } from "./task-store";
+import { createTasksRouter } from "./task-router";
+
+vi.mock("server-only", () => ({}));
 
 describe("task procedures", () => {
   let caller: ReturnType<ReturnType<typeof createTasksRouter>["createCaller"]>;

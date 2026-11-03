@@ -1,5 +1,5 @@
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
-import { appRouter } from "@/server/router";
+import { appRouter } from "@/server/api/root";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

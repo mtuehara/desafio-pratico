@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
-import { taskInputSchema, type TaskInput } from "@/shared/task";
+import { taskInputSchema, type TaskInput } from "@/features/tasks/schemas/task.schema";
 
 type Props = {
   initialValues?: TaskInput;

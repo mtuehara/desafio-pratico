@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { updateTaskSchema, taskIdSchema, taskInputSchema, taskPageInputSchema } from "./task";
+import { updateTaskSchema, taskIdSchema, taskInputSchema, taskPageInputSchema } from "./task.schema";
 
 describe("task validation", () => {
   it.each([0, -1, 51, 1.5])("rejects an invalid page size: %s", (limit) => {

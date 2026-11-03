@@ -1,8 +1,8 @@
 import "server-only";
 
 import { createTRPCRouter, publicProcedure } from "./trpc";
-import { createTasksRouter } from "./routers/tasks";
-import { taskStore } from "./task-store";
+import { createTasksRouter } from "@/features/tasks/server/task-router";
+import { taskStore } from "@/features/tasks/server/task-store";
 
 export const appRouter = createTRPCRouter({
   status: publicProcedure.query(() => ({ ok: true })),

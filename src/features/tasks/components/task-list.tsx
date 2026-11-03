@@ -2,8 +2,8 @@
 
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
-import { TASK_PAGE_SIZE, type TaskPage } from "@/shared/task";
-import { useTRPC } from "@/trpc/client";
+import { TASK_PAGE_SIZE, type TaskPage } from "@/features/tasks/schemas/task.schema";
+import { useTRPC } from "@/lib/trpc/client";
 import Link from "next/link";
 
 const formatDate = new Intl.DateTimeFormat("pt-BR", {

@@ -3,12 +3,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Task, TaskCursor } from "@/shared/task";
+import type { Task, TaskCursor } from "@/features/tasks/schemas/task.schema";
 import { TaskList } from "./task-list";
 
 const api = vi.hoisted(() => ({ list: vi.fn(), delete: vi.fn() }));
 
-vi.mock("@/trpc/client", () => ({
+vi.mock("@/lib/trpc/client", () => ({
   useTRPC: () => ({
     tasks: {
       pathKey: () => ["tasks"],

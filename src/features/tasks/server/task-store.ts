@@ -1,5 +1,7 @@
+import "server-only";
+
 import { randomUUID } from "node:crypto";
-import type { Task, TaskInput } from "@/shared/task";
+import type { Task, TaskInput } from "@/features/tasks/schemas/task.schema";
 
 export function createTaskStore() {
   const tasks = new Map<string, Task>();

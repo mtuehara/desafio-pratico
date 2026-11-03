@@ -1,7 +1,7 @@
 import { createTRPCClient, httpLink } from "@trpc/client";
 import { describe, expect, it, vi } from "vitest";
 import { GET } from "@/app/api/trpc/[trpc]/route";
-import { appRouter, type AppRouter } from "./router";
+import { appRouter, type AppRouter } from "./root";
 
 vi.mock("server-only", () => ({}));
 
