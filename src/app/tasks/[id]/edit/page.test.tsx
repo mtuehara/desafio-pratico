@@ -1,12 +1,12 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { appRouter } from "@/server/router";
-import type { Task } from "@/shared/task";
+import { appRouter } from "@/server/api/root";
+import type { Task } from "@/features/tasks/schemas/task.schema";
 import EditTaskPage from "./page";
 
 vi.mock("server-only", () => ({}));
 vi.mock("next/navigation", () => ({ notFound: () => { throw new Error("NOT_FOUND"); } }));
-vi.mock("@/components/edit-task", () => ({
+vi.mock("@/features/tasks/components/edit-task", () => ({
   EditTask: ({ task }: { task: Task }) => <div>{task.title}</div>,
 }));
 

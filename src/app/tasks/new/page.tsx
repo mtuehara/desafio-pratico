@@ -1,4 +1,4 @@
-import { CreateTask } from "@/components/create-task";
+import { CreateTask } from "@/features/tasks/components/create-task";
 
 export default function NovaTarefaPage() {
   return (

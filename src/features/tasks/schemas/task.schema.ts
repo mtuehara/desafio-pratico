@@ -27,7 +27,7 @@ const taskCursorSchema = z.object({
 
 export const taskPageInputSchema = z.object({
   limit: z.number().int().min(1).max(50).default(TASK_PAGE_SIZE),
-  cursor: taskCursorSchema.optional(),
+  cursor: taskCursorSchema.nullish().transform((cursor) => cursor ?? undefined),
 });
 
 export type TaskCursor = z.infer<typeof taskCursorSchema>;

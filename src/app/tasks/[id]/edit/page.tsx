@@ -1,8 +1,8 @@
 import { TRPCError } from "@trpc/server";
 import { notFound } from "next/navigation";
-import { EditTask } from "@/components/edit-task";
-import { appRouter } from "@/server/router";
-import { taskIdSchema } from "@/shared/task";
+import { EditTask } from "@/features/tasks/components/edit-task";
+import { appRouter } from "@/server/api/root";
+import { taskIdSchema } from "@/features/tasks/schemas/task.schema";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

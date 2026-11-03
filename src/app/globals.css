@@ -78,7 +78,11 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
   color: #15562c;
 }
 
-.toolbar, .actions {
+.task-list-heading {
+  margin: 1.5rem 0;
+}
+
+.actions {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -154,4 +158,33 @@ textarea {
 
 .scroll-sentinel {
   height: 1px;
+}
+
+.toast {
+  padding: 0.75rem;
+  border-radius: 0.4rem;
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  max-width: min(28rem, calc(100vw - 2rem));
+  box-shadow: 0 4px 16px #17203333;
+}
+
+.toast-success {
+  color: #15562c;
+  background: #eaf7ee;
+}
+
+.toast-error {
+  color: #a11818;
+  background: #fff0f0;
+}
+
+.toast p {
+  margin: 0;
+  overflow-wrap: anywhere;
 }

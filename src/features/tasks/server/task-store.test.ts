@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createTaskStore } from "./task-store";
 
+vi.mock("server-only", () => ({}));
+
 describe("task store", () => {
   let store: ReturnType<typeof createTaskStore>;
 

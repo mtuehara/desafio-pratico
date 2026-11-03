@@ -1,21 +1,23 @@
 // @vitest-environment jsdom
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MutationCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useState } from "react";
+import { ToastProvider, useToast } from "@/components/ui/toast";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Task, TaskCursor } from "@/shared/task";
+import type { Task, TaskCursor } from "@/features/tasks/schemas/task.schema";
 import { TaskList } from "./task-list";
 
 const api = vi.hoisted(() => ({ list: vi.fn(), delete: vi.fn() }));
 
-vi.mock("@/trpc/client", () => ({
+vi.mock("@/lib/trpc/client", () => ({
   useTRPC: () => ({
     tasks: {
       pathKey: () => ["tasks"],
       listPage: {
         infiniteQueryOptions: (_input: unknown, options: object) => ({
           ...options, queryKey: ["tasks"], initialPageParam: null,
-          queryFn: ({ pageParam }: { pageParam?: TaskCursor | null }) => api.list({ cursor: pageParam ?? undefined }),
+          queryFn: ({ pageParam }: { pageParam?: TaskCursor | null }) => api.list({ cursor: pageParam }),
         }),
         infiniteQueryKey: () => ["tasks"],
       },
@@ -32,13 +34,21 @@ const task: Task = {
   createdAt: Date.parse("2026-11-03T12:00:00Z"),
 };
 
-function renderTaskList(tasks: Task[] = [task], nextCursor?: TaskCursor) {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
-  return render(
+function TestTaskList({ tasks, nextCursor }: { tasks: Task[]; nextCursor?: TaskCursor }) {
+  const { showError } = useToast();
+  const [queryClient] = useState(() => new QueryClient({
+    mutationCache: new MutationCache({ onError: (error) => showError(error.message) }),
+    defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+  }));
+  return (
     <QueryClientProvider client={queryClient}>
       <TaskList initialPage={{ items: tasks, nextCursor }} />
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+}
+
+function renderTaskList(tasks: Task[] = [task], nextCursor?: TaskCursor) {
+  return render(<ToastProvider><TestTaskList tasks={tasks} nextCursor={nextCursor} /></ToastProvider>);
 }
 
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
@@ -63,20 +73,14 @@ describe("task list", () => {
     expect(screen.getByText("Nenhuma tarefa cadastrada.")).toBeTruthy();
   });
 
-  it("refreshes the list with API results", async () => {
-    api.list.mockResolvedValue({ items: [] });
-    renderTaskList();
-    await userEvent.click(screen.getByRole("button", { name: "Atualizar lista" }));
-    await screen.findByText("Nenhuma tarefa cadastrada.");
-    expect(screen.queryByRole("heading", { name: task.title })).toBeNull();
-  });
-
-  it("preserves existing data and reports a failed refresh", async () => {
+  it("preserves remaining tasks when reloading after deletion fails", async () => {
+    const remaining = { ...task, id: "b3d08168-87a6-4b41-b488-96c8375ac2ee", title: "Remaining task" };
     api.list.mockRejectedValue(new Error("Falha na rede"));
-    renderTaskList();
-    await userEvent.click(screen.getByRole("button", { name: "Atualizar lista" }));
+    renderTaskList([task, remaining]);
+    await userEvent.click(screen.getByRole("button", { name: `Excluir ${task.title}` }));
     await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("Não foi possível atualizar"));
-    expect(screen.getByRole("heading", { name: task.title })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: remaining.title })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: task.title })).toBeNull();
   });
 
   it("removes the card and reports a successful deletion", async () => {
@@ -93,7 +97,7 @@ describe("task list", () => {
     renderTaskList();
     await userEvent.click(screen.getByRole("button", { name: `Excluir ${task.title}` }));
     await screen.findByRole("alert");
-    expect(screen.getByRole("alert").textContent).toBe("Tarefa não encontrada.");
+    expect(screen.getByRole("alert", { name: "Erro" }).textContent).toContain("Tarefa não encontrada.");
     expect(screen.getByRole("heading", { name: task.title })).toBeTruthy();
   });
 

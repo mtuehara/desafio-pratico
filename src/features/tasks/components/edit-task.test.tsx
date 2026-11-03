@@ -2,13 +2,14 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { ToastProvider } from "@/components/ui/toast";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Task } from "@/shared/task";
+import type { Task } from "@/features/tasks/schemas/task.schema";
 import { EditTask } from "./edit-task";
 
 const api = vi.hoisted(() => ({ update: vi.fn(), push: vi.fn(), refresh: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: api.push, refresh: api.refresh }) }));
-vi.mock("@/trpc/client", () => ({
+vi.mock("@/lib/trpc/client", () => ({
   useTRPC: () => ({ tasks: {
     update: { mutationOptions: () => ({ mutationFn: api.update }) },
     pathKey: () => ["tasks"],
@@ -29,7 +30,7 @@ beforeEach(() => {
 function renderEditTask() {
   const client = new QueryClient();
   client.setQueryData(["tasks"], [task]);
-  render(<QueryClientProvider client={client}><EditTask task={task} /></QueryClientProvider>);
+  render(<ToastProvider><QueryClientProvider client={client}><EditTask task={task} /></QueryClientProvider></ToastProvider>);
   return client;
 }
 
@@ -41,9 +42,10 @@ describe("task editing", () => {
     await userEvent.type(screen.getByLabelText(/Título/), "Practice");
     await userEvent.clear(screen.getByLabelText(/Descrição/));
     await userEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
-    await waitFor(() => expect(api.push).toHaveBeenCalledWith("/?success=updated"));
+    await waitFor(() => expect(api.push).toHaveBeenCalledWith("/"));
     expect(api.update.mock.calls[0][0]).toEqual({ id: task.id, title: "Practice", description: undefined });
     expect(client.getQueryData(["tasks"])).toBeUndefined();
+    expect(screen.getByRole("status", { name: "Sucesso" }).textContent).toContain("Tarefa atualizada com sucesso.");
   });
 
   it("keeps the form when the task was deleted before saving", async () => {
@@ -53,5 +55,6 @@ describe("task editing", () => {
     expect((await screen.findByRole("alert")).textContent).toBe("Tarefa não encontrada.");
     expect(screen.getByLabelText(/Título/)).toHaveProperty("value", "Study");
     expect(api.push).not.toHaveBeenCalled();
+    expect(screen.queryByRole("status", { name: "Sucesso" })).toBeNull();
   });
 });

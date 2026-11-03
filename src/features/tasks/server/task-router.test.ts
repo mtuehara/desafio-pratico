@@ -1,13 +1,52 @@
 import { randomUUID } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { createTaskStore } from "../task-store";
-import { createTasksRouter } from "./tasks";
+import { createTaskStore } from "./task-store";
+import { createTasksRouter } from "./task-router";
+
+vi.mock("server-only", () => ({}));
 
 describe("task procedures", () => {
   let caller: ReturnType<ReturnType<typeof createTasksRouter>["createCaller"]>;
 
   beforeEach(() => {
     caller = createTasksRouter(createTaskStore()).createCaller({});
+  });
+
+  it("accepts a null cursor when reloading the first page", async () => {
+    await caller.create({ title: "First-page task" });
+    expect(await caller.listPage({ cursor: null })).toEqual(await caller.listPage({}));
+  });
+
+  it.each(["Study", " study ", "STUDY"])("allows repeated titles while generating unique IDs: %s", async (title) => {
+    const existing = await caller.create({ title: "Study" });
+    const created = await caller.create({ title });
+    expect(created.id).not.toBe(existing.id);
+    expect(created.title).toBe(title.trim());
+    expect(await caller.list()).toHaveLength(2);
+    expect(await caller.getById({ id: existing.id })).toEqual(existing);
+  });
+
+  it.each(["First", " first ", "FIRST"])("allows editing to a title used by another task: %s", async (title) => {
+    const first = await caller.create({ title: "First" });
+    const original = await caller.create({ title: "Second", description: "Original description" });
+    const updated = await caller.update({ id: original.id, title, description: original.description });
+    expect(updated).toEqual({ ...original, title: title.trim() });
+    expect(await caller.getById({ id: first.id })).toEqual(first);
+  });
+
+  it("allows updating a task while keeping its own title", async () => {
+    const original = await caller.create({ title: "Study" });
+    const updated = await caller.update({ id: original.id, title: "  STUDY  ", description: "Updated" });
+    expect(updated).toMatchObject({ id: original.id, title: "STUDY", description: "Updated", createdAt: original.createdAt });
+    expect(await caller.list()).toHaveLength(1);
+  });
+
+  it("allows concurrent creates with the same title and different IDs", async () => {
+    const results = await Promise.all([
+      caller.create({ title: "Study" }), caller.create({ title: "Study" }),
+    ]);
+    expect(new Set(results.map((task) => task.id)).size).toBe(2);
+    expect(await caller.list()).toHaveLength(2);
   });
 
   it("creates, lists, finds, updates and deletes a task", async () => {
