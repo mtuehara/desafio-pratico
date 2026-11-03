@@ -8,7 +8,10 @@ const formatDate = new Intl.DateTimeFormat("pt-BR", {
   dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo",
 });
 
-export function TaskList({ initialTasks }: { initialTasks: Task[] }) {
+export function TaskList({ initialTasks, successMessage }: {
+  initialTasks: Task[];
+  successMessage?: string;
+}) {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const query = useQuery({
@@ -35,6 +38,7 @@ export function TaskList({ initialTasks }: { initialTasks: Task[] }) {
       {query.isError && <p role="alert">Não foi possível atualizar as tarefas. Tente novamente.</p>}
       {deleteTask.isError && <p role="alert">{deleteTask.error.message || "Não foi possível excluir a tarefa."}</p>}
       {deleteTask.isSuccess && <p role="status">Tarefa excluída com sucesso.</p>}
+      {deleteTask.isIdle && successMessage && <p role="status">{successMessage}</p>}
       {query.data.length === 0 ? (
         <p className="empty">Nenhuma tarefa cadastrada.</p>
       ) : (
