@@ -1,12 +1,12 @@
 import "server-only";
 
 import { createTRPCRouter, publicProcedure } from "./trpc";
-import { criarTarefasRouter } from "./routers/tarefas";
-import { tarefasStore } from "./tarefas-store";
+import { createTasksRouter } from "./routers/tasks";
+import { taskStore } from "./task-store";
 
 export const appRouter = createTRPCRouter({
   status: publicProcedure.query(() => ({ ok: true })),
-  tarefas: criarTarefasRouter(tarefasStore),
+  tasks: createTasksRouter(taskStore),
 });
 
 export type AppRouter = typeof appRouter;
