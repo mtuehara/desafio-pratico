@@ -17,3 +17,18 @@ export type Task = TaskInput & {
   id: string;
   createdAt: number;
 };
+
+export const TASK_PAGE_SIZE = 10;
+
+const taskCursorSchema = z.object({
+  createdAt: z.number().int().nonnegative(),
+  id: z.uuid(),
+});
+
+export const taskPageInputSchema = z.object({
+  limit: z.number().int().min(1).max(50).default(TASK_PAGE_SIZE),
+  cursor: taskCursorSchema.optional(),
+});
+
+export type TaskCursor = z.infer<typeof taskCursorSchema>;
+export type TaskPage = { items: Task[]; nextCursor?: TaskCursor };

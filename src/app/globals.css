@@ -151,3 +151,7 @@ textarea {
 [aria-invalid="true"] {
   border-color: #a11818;
 }
+
+.scroll-sentinel {
+  height: 1px;
+}

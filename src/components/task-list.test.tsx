@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Task } from "@/shared/task";
+import type { Task, TaskCursor } from "@/shared/task";
 import { TaskList } from "./task-list";
 
 const api = vi.hoisted(() => ({ list: vi.fn(), delete: vi.fn() }));
@@ -11,9 +11,13 @@ const api = vi.hoisted(() => ({ list: vi.fn(), delete: vi.fn() }));
 vi.mock("@/trpc/client", () => ({
   useTRPC: () => ({
     tasks: {
-      list: {
-        queryOptions: () => ({ queryKey: ["tasks"], queryFn: api.list }),
-        queryKey: () => ["tasks"],
+      pathKey: () => ["tasks"],
+      listPage: {
+        infiniteQueryOptions: (_input: unknown, options: object) => ({
+          ...options, queryKey: ["tasks"], initialPageParam: null,
+          queryFn: ({ pageParam }: { pageParam?: TaskCursor | null }) => api.list({ cursor: pageParam ?? undefined }),
+        }),
+        infiniteQueryKey: () => ["tasks"],
       },
       delete: {
         mutationOptions: (options: object) => ({ ...options, mutationFn: api.delete }),
@@ -28,19 +32,19 @@ const task: Task = {
   createdAt: Date.parse("2026-11-03T12:00:00Z"),
 };
 
-function renderTaskList(tasks: Task[] = [task]) {
+function renderTaskList(tasks: Task[] = [task], nextCursor?: TaskCursor) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
   return render(
     <QueryClientProvider client={queryClient}>
-      <TaskList initialTasks={tasks} />
+      <TaskList initialPage={{ items: tasks, nextCursor }} />
     </QueryClientProvider>,
   );
 }
 
-afterEach(cleanup);
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 beforeEach(() => {
   api.list.mockReset();
-  api.list.mockResolvedValue([task]);
+  api.list.mockResolvedValue({ items: [task] });
   api.delete.mockReset();
   api.delete.mockResolvedValue({ id: task.id });
 });
@@ -60,7 +64,7 @@ describe("task list", () => {
   });
 
   it("refreshes the list with API results", async () => {
-    api.list.mockResolvedValue([]);
+    api.list.mockResolvedValue({ items: [] });
     renderTaskList();
     await userEvent.click(screen.getByRole("button", { name: "Atualizar lista" }));
     await screen.findByText("Nenhuma tarefa cadastrada.");
@@ -76,7 +80,7 @@ describe("task list", () => {
   });
 
   it("removes the card and reports a successful deletion", async () => {
-    api.list.mockResolvedValue([]);
+    api.list.mockResolvedValue({ items: [] });
     renderTaskList();
     await userEvent.click(screen.getByRole("button", { name: `Excluir ${task.title}` }));
     await screen.findByText("Tarefa excluída com sucesso.");
@@ -96,7 +100,7 @@ describe("task list", () => {
   it("prevents duplicate deletions while a request is pending", async () => {
     const operation = Promise.withResolvers<{ id: string }>();
     api.delete.mockReturnValue(operation.promise);
-    api.list.mockResolvedValue([]);
+    api.list.mockResolvedValue({ items: [] });
     renderTaskList();
     const button = screen.getByRole("button", { name: `Excluir ${task.title}` });
     await userEvent.click(button);
@@ -106,5 +110,46 @@ describe("task list", () => {
     expect(api.delete).toHaveBeenCalledTimes(1);
     await act(async () => { operation.resolve({ id: task.id }); });
     await screen.findByText("Tarefa excluída com sucesso.");
+  });
+
+  it("appends the next page and stops at the end", async () => {
+    const nextTask = { ...task, id: "b3d08168-87a6-4b41-b488-96c8375ac2ee", title: "Next task" };
+    const cursor = { id: task.id, createdAt: task.createdAt };
+    api.list.mockResolvedValue({ items: [nextTask] });
+    renderTaskList([task], cursor);
+    await userEvent.click(screen.getByRole("button", { name: "Carregar mais" }));
+    await screen.findByRole("heading", { name: "Next task" });
+    expect(screen.getByRole("heading", { name: task.title })).toBeTruthy();
+    expect(api.list).toHaveBeenCalledWith({ cursor });
+    expect(screen.queryByRole("button", { name: "Carregar mais" })).toBeNull();
+  });
+
+  it("preserves earlier pages after failure and allows retrying", async () => {
+    const nextTask = { ...task, id: "b3d08168-87a6-4b41-b488-96c8375ac2ee", title: "Next task" };
+    api.list.mockRejectedValueOnce(new Error("Network error")).mockResolvedValue({ items: [nextTask] });
+    renderTaskList([task], { id: task.id, createdAt: task.createdAt });
+    await userEvent.click(screen.getByRole("button", { name: "Carregar mais" }));
+    expect((await screen.findByRole("alert")).textContent).toContain("Não foi possível carregar mais");
+    expect(screen.getByRole("heading", { name: task.title })).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Tentar carregar novamente" }));
+    await screen.findByRole("heading", { name: "Next task" });
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("loads the next page when the scroll sentinel becomes visible", async () => {
+    let intersect: () => void = () => { throw new Error("Observer not initialized"); };
+    const disconnect = vi.fn();
+    vi.stubGlobal("IntersectionObserver", class {
+      constructor(callback: (entries: { isIntersecting: boolean }[]) => void) {
+        intersect = () => callback([{ isIntersecting: true }]);
+      }
+      observe() {}
+      disconnect = disconnect;
+    });
+    api.list.mockResolvedValue({ items: [] });
+    renderTaskList([task], { id: task.id, createdAt: task.createdAt });
+    await act(async () => { intersect(); });
+    await waitFor(() => expect(api.list).toHaveBeenCalledTimes(1));
+    expect(disconnect).toHaveBeenCalled();
   });
 });
