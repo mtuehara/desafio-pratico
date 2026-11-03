@@ -120,25 +120,6 @@ Os dados desaparecem ao reiniciar o processo. Instâncias diferentes não compar
 
 Não há autenticação: todas as tarefas pertencem à lista compartilhada do desafio. Banco de dados e contas de usuário ficam fora do escopo.
 
-## Plano de branches
-
-Cada linha é um item independente. As branches seguintes partem da etapa anterior consolidada, preservando suas dependências; a integração será feita quando solicitada.
-
-| Branch | Entrega |
-| --- | --- |
-| `docs/00-arquitetura` | Regras de colaboração e arquitetura documentada |
-| `feat/01-base-next` | Projeto Next.js 15, TypeScript, lint e página inicial mínima |
-| `feat/02-integracao-trpc` | Rota HTTP, router mínimo e providers, com verificação de comunicação |
-| `feat/03-crud-tarefas` | Modelo, armazenamento, procedures e testes de validação e erros |
-| `feat/04-listagem-ssr` | Listagem dinâmica renderizada no servidor e estado vazio |
-| `feat/05-exclusao` | Exclusão pela lista, carregamento e feedback |
-| `feat/06-criacao` | Formulário, validação e criação com feedback |
-| `feat/07-edicao` | Reutilização do formulário e tratamento de tarefa inexistente |
-| `feat/08-infinite-scroll` | Bônus: paginação por cursor e carregamento incremental |
-| `docs/09-documentacao` | Instruções finais de execução e revisão dos fluxos |
-
-Para o bônus, `listar` ganhará paginação por cursor com ordem estável. A primeira página continuará sendo carregada no servidor. Um `IntersectionObserver` solicitará a página seguinte, respeitando estados de carregamento e fim da lista; um botão permitirá tentar novamente após falhas.
-
 ## Verificação por etapa
 
 A base dispõe de verificação de tipos, lint e build pelos scripts acima. O CRUD terá testes para título vazio, criação, atualização, exclusão e IDs inexistentes. Os fluxos da interface serão verificados conforme forem implementados, incluindo erros e SSR.
