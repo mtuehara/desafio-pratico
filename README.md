@@ -1,10 +1,10 @@
 # Gerenciador de tarefas
 
-Desafio prático com Next.js 15, TypeScript e tRPC. A base Next.js está implementada com uma página inicial mínima. A integração tRPC e as funcionalidades de tarefas serão adicionadas nas próximas etapas.
+Desafio prático com Next.js 15, TypeScript e tRPC. A base e a integração tRPC estão implementadas; as funcionalidades de tarefas serão adicionadas nas próximas etapas.
 
 ## Executar a base
 
-Use Node.js 22 ou superior e npm. A base foi verificada com Node.js 24.13.0 e npm 11.6.2.
+Use Node.js 22.12+, 24.x ou 26+ e npm, conforme a compatibilidade do Vitest. O projeto foi verificado com Node.js 24.13.0 e npm 11.6.2.
 
 ```sh
 npm ci
@@ -18,11 +18,18 @@ Para verificar o projeto e executar a versão de produção:
 ```sh
 npm run lint
 npm run typecheck
+npm test
 npm run build
 npm start
 ```
 
 O `build` deve terminar antes do `start`. `npm ci` instala as versões registradas no `package-lock.json`. A base usa Next.js 15.5.29 e React/React DOM 19.3.1; o TypeScript está configurado em modo estrito.
+
+## Testes
+
+`npm test` executa o Vitest uma vez; `npm run test:watch` acompanha alterações durante o desenvolvimento. Os testes ficam junto dos módulos, com sufixo `.test.ts` ou `.test.tsx`.
+
+A integração verifica o caller do servidor, a comunicação entre o cliente tipado e o adaptador HTTP e uma procedure inexistente, sem depender de um servidor de rede. A consulta `status` está disponível em `/api/trpc/status`.
 
 ## Arquivos da base
 
