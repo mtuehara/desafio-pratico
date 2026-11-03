@@ -27,4 +27,16 @@ describe("integração tRPC", () => {
     const response = await GET(new Request("http://localhost/api/trpc/inexistente"));
     expect(response.status).toBe(404);
   });
+
+  it("entrega a mensagem de validação ao cliente HTTP", async () => {
+    const client = createTRPCClient<AppRouter>({
+      links: [httpLink({
+        url: "http://localhost/api/trpc",
+        fetch: (input, init) => GET(new Request(input, init)),
+      })],
+    });
+    await expect(client.tarefas.criar.mutate({ titulo: "   " })).rejects.toMatchObject({
+      message: "Informe o título da tarefa.", data: { code: "BAD_REQUEST" },
+    });
+  });
 });
