@@ -35,9 +35,37 @@ npm start
 
 Run `build` before `start`. Use `npm run test:watch` while developing. The lockfile records exact dependency versions.
 
+## Using the application
+
+1. Open the home page and select **Nova tarefa**.
+2. Enter a title and an optional description, then select **Criar tarefa**.
+3. Select **Editar** on a task to update it, or **Excluir** to remove it.
+4. After adding more than 10 tasks, scroll down or select **Carregar mais** to load another page.
+5. Use **Atualizar lista** to retrieve changes made from another tab.
+
+Forms preserve input after errors and prevent duplicate submissions while pending. Successful creation and editing return to the list with feedback. A missing task shows a not-found page with a link back to the list.
+
+## Test coverage
+
+The suite contains 65 tests across 10 files. It uses Vitest with a Node.js environment for backend tests and jsdom with Testing Library for component tests.
+
+| Area | Verified behavior |
+| --- | --- |
+| Input schemas | Required trimmed title, optional description, server-owned fields, UUIDs, page-size and cursor validation |
+| In-memory store | Unique IDs, timestamps, stable ordering, defensive copies, updates, deletion and instance isolation |
+| tRPC procedures | Complete CRUD lifecycle, rejected writes, meaningful errors and stable cursor pagination after concurrent list changes |
+| HTTP adapter | Typed client communication, readable validation errors and unknown procedures |
+| Task list | Initial data, refresh, empty state, deletion feedback, duplicate request prevention, incremental loading and retry |
+| Form and mutations | Controlled fields, normalization, optional description, preserved input, cache reset and success navigation |
+| Server pages | Tasks in the initial HTML, preloaded edit data and missing-task handling |
+
+Component tests mock API responses while exercising the actual form and TanStack Query state. Backend tests use fresh stores rather than shared fixtures. HTTP adapter tests use real tRPC client requests against the Fetch adapter without opening network ports.
+
 ## Architecture
 
 - `src/app`: pages, document layout, styles, loading and error boundaries, and the tRPC HTTP adapter.
+- `src/app/(home)`: server-loaded home page and its loading boundary. The route group does not change the `/` URL; scoping loading here lets missing edit pages return HTTP 404 before streaming starts.
+- `src/app/tasks`: creation and server-loaded editing pages.
 - `src/components/task-list.tsx`: interactive task list, query refresh and deletion.
 - `src/components/task-form.tsx`: reusable controlled form with validation and submission feedback.
 - `src/components/create-task.tsx`: creation mutation, cache reset and navigation after success.
@@ -53,7 +81,7 @@ Tests live next to their modules as `.test.ts` or `.test.tsx` files. The server 
 
 Deletion removes a task from the cache only after success and then invalidates the query. Failures preserve existing data. Dates use an explicit `America/Sao_Paulo` time zone to keep server and browser output consistent.
 
-The server renders the first page. `useInfiniteQuery` appends subsequent pages, and an `IntersectionObserver` requests more tasks near the viewport. The cursor contains the creation timestamp and ID, so deleting the cursor task does not break pagination. Failed requests preserve loaded pages and require a manual retry. Newly inserted tasks appear on refresh rather than shifting existing pages.
+The server renders the first page. `useInfiniteQuery` appends subsequent pages, and an `IntersectionObserver` requests more tasks near the viewport. The cursor contains the creation timestamp and ID, so deleting the cursor task does not break pagination. Failed requests preserve loaded pages and require a manual retry. Tasks inserted ahead of the current cursor appear on refresh rather than shifting existing page positions.
 
 The project uses plain CSS and system fonts. TypeScript runs in strict mode. The Next.js configuration pins the project root to prevent external lockfiles from affecting build tracing or Turbopack.
 
