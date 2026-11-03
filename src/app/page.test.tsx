@@ -6,13 +6,13 @@ import HomePage from "./page";
 
 vi.mock("server-only", () => ({}));
 
-it("inclui as tarefas no HTML inicial renderizado no servidor", async () => {
+it("includes tasks in the initial server rendered HTML", async () => {
   const caller = appRouter.createCaller({});
-  const tarefa = await caller.tarefas.criar({ titulo: "Tarefa carregada no servidor" });
+  const task = await caller.tasks.create({ title: "Tarefa carregada no servidor" });
   try {
     const html = renderToStaticMarkup(<Providers>{await HomePage()}</Providers>);
     expect(html).toContain("Tarefa carregada no servidor</h3>");
   } finally {
-    await caller.tarefas.deletar({ id: tarefa.id });
+    await caller.tasks.delete({ id: task.id });
   }
 });

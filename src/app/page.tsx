@@ -1,16 +1,16 @@
-import { ListaTarefas } from "@/components/lista-tarefas";
+import { TaskList } from "@/components/task-list";
 import { appRouter } from "@/server/router";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export default async function HomePage() {
-  const tarefas = await appRouter.createCaller({}).tarefas.listar();
+  const tasks = await appRouter.createCaller({}).tasks.list();
   return (
     <main>
       <h1>Gerenciador de tarefas</h1>
       <p className="intro">Um lugar simples para organizar suas tarefas.</p>
-      <ListaTarefas tarefasIniciais={tarefas} />
+      <TaskList initialTasks={tasks} />
     </main>
   );
 }
