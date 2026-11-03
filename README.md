@@ -8,9 +8,10 @@ A task manager built with Next.js 15, TypeScript and tRPC. Source code, API fiel
 - Dynamic server-rendered task list, including tasks in the initial HTML.
 - Deletion with loading, success and failure feedback.
 - Task creation at `/tasks/new`, with shared input validation, pending state and error feedback.
+- Task editing at `/tasks/[id]/edit`, reusing the form and handling missing tasks.
 - Unit tests for schemas, storage and procedures; component tests for the list; integration tests for HTTP communication and server rendering.
 
-The editing page is being implemented next.
+All required CRUD pages are implemented.
 
 ## Setup
 
@@ -39,6 +40,7 @@ Run `build` before `start`. Use `npm run test:watch` while developing. The lockf
 - `src/components/task-list.tsx`: interactive task list, query refresh and deletion.
 - `src/components/task-form.tsx`: reusable controlled form with validation and submission feedback.
 - `src/components/create-task.tsx`: creation mutation, cache reset and navigation after success.
+- `src/components/edit-task.tsx`: update mutation, prefilled form and navigation after success.
 - `src/server/trpc.ts`: tRPC initialization and error formatting.
 - `src/server/router.ts`: root router and exported `AppRouter` type.
 - `src/server/routers/tasks.ts`: validated task procedures.

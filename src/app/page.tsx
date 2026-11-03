@@ -10,7 +10,9 @@ export default async function HomePage({ searchParams }: {
 }) {
   const tasks = await appRouter.createCaller({}).tasks.list();
   const { success } = await searchParams;
-  const successMessage = success === "created" ? "Tarefa criada com sucesso." : undefined;
+  const successMessage = success === "created"
+    ? "Tarefa criada com sucesso."
+    : success === "updated" ? "Tarefa atualizada com sucesso." : undefined;
   return (
     <main>
       <h1>Gerenciador de tarefas</h1>

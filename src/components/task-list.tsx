@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Task } from "@/shared/task";
 import { useTRPC } from "@/trpc/client";
+import Link from "next/link";
 
 const formatDate = new Intl.DateTimeFormat("pt-BR", {
   dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo",
@@ -51,6 +52,7 @@ export function TaskList({ initialTasks, successMessage }: {
                 Criada em {formatDate.format(task.createdAt)}
               </time>
               <div className="actions">
+                <Link href={`/tasks/${task.id}/edit`}>Editar</Link>
                 <button
                   className="danger"
                   aria-label={`Excluir ${task.title}`}
