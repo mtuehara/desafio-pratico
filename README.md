@@ -1,180 +1,110 @@
 # Task manager
 
-A task manager built with Next.js 15, TypeScript and tRPC. Source code, API fields, tests and comments use English. User-facing content uses Brazilian Portuguese.
+A simple task management application built with Next.js 15, React, TypeScript and tRPC. Tasks are stored in memory. Source code and documentation use English; the interface uses Brazilian Portuguese.
 
-## Features
+## Requirements
 
-- In-memory CRUD API with Zod validation and readable errors.
-- Unique task titles on creation and editing, comparing trimmed text without case sensitivity.
-- Error toasts for failed tRPC queries and mutations.
-- Dynamic server-rendered task list, including tasks in the initial HTML.
-- Deletion with loading, success and failure feedback.
-- Task creation at `/tasks/new`, with shared input validation, pending state and error feedback.
-- Task editing at `/tasks/[id]/edit`, reusing the form and handling missing tasks.
-- Infinite scroll with 10 tasks per page, an accessible manual loading button, and retry after failure.
-- Unit tests for schemas, storage and procedures; component tests for the list; integration tests for HTTP communication and server rendering.
+- Node.js 22.12+, 24.x or 26+, matching the Vitest engine requirements.
+- npm. Verified with Node.js 24.13.0 and npm 11.6.2.
 
-All required CRUD pages are implemented.
-
-## Setup
-
-Use Node.js 22.12+, 24.x or 26+ and npm, matching the Vitest engine requirements. Verified with Node.js 24.13.0 and npm 11.6.2.
+## Run locally
 
 ```sh
 npm ci
 npm run dev
 ```
 
-Open [localhost:3000](http://localhost:3000). Development uses Turbopack.
+Open [localhost:3000](http://localhost:3000).
+
+For production, stop the development server before building and starting the application. Both modes use the same `.next` directory.
+
+```sh
+npm run build
+npm start
+```
+
+## Verify
 
 ```sh
 npm test
 npm run lint
 npm run typecheck
-npm run build
-npm start
 ```
 
-Run `build` before `start`. Use `npm run test:watch` while developing. The lockfile records exact dependency versions.
+Use `npm run test:watch` during development. Tests cover input validation, isolated storage, CRUD procedures, server rendering, forms, pagination, HTTP errors and error toasts. Error-contract tests include `CONFLICT`/409 using test-only routers.
 
-## Using the application
+## Challenge coverage
 
-1. Open the home page and select **Nova tarefa**.
-2. Enter a title and an optional description, then select **Criar tarefa**.
-3. Select **Editar** on a task to update it, or **Excluir** to remove it.
-4. After adding more than 10 tasks, scroll down or select **Carregar mais** to load another page.
-
-Forms preserve input after errors and prevent duplicate submissions while pending. Successful creation and editing return to the list with feedback. A missing task shows a not-found page with a link back to the list.
-
-## Test coverage
-
-The suite contains 82 tests across 12 files. It uses Vitest with a Node.js environment for backend tests and jsdom with Testing Library for component tests.
-
-| Area | Verified behavior |
+| Requirement | Implementation |
 | --- | --- |
-| Input schemas | Required trimmed title, optional description, server-owned fields, UUIDs, page-size and cursor validation |
-| In-memory store | Unique IDs, timestamps, stable ordering, defensive copies, updates, deletion and instance isolation |
-| tRPC procedures | Complete CRUD lifecycle, rejected writes, meaningful errors and stable cursor pagination after concurrent list changes |
-| HTTP adapter | Typed client communication, readable validation errors and unknown procedures |
-| Task list | Initial data, reload after deletion, empty state, deletion feedback, duplicate request prevention, incremental loading and retry |
-| Form and mutations | Controlled fields, normalization, optional description, preserved input, cache reset and success navigation |
-| Server pages | Tasks in the initial HTML, preloaded edit data and missing-task handling |
-| Error toasts | Backend conflicts during creation and editing, failed deletion, query connection errors, dismissal and timeout |
+| Next.js 15 and tRPC | App Router with the Fetch adapter at `/api/trpc` and a typed browser client |
+| In-memory task CRUD | Server-generated UUID and creation timestamp; creation, listing, updates and deletion |
+| Validation and meaningful errors | Required trimmed title, optional description, `BAD_REQUEST` for invalid input and `NOT_FOUND` for missing tasks |
+| Server-rendered listing | The server loads the first page through a direct tRPC caller and includes tasks in the initial HTML |
+| Creation and editing forms | Functional components, controlled fields and hooks; shared validation and preserved input after failure |
+| Loading, success and error feedback | Pending controls, success messages, inline validation and client tRPC error toasts |
+| Infinite scroll bonus | Cursor pagination, automatic incremental loading, manual fallback and retry after failure |
+| Documentation and tests | This README, comments on key decisions, unit tests, component tests and integration tests |
 
-Component tests mock API responses while exercising the actual form and TanStack Query state. Backend tests use fresh stores rather than shared fixtures. HTTP adapter tests use real tRPC client requests against the Fetch adapter without opening network ports.
-
-## Architecture
-
-The application uses a feature-based structure. Routes compose the task feature; task-specific code stays together; tRPC infrastructure is independent of the feature's UI.
-
-```text
-src/
-  app/
-    api/trpc/[trpc]/route.ts   # HTTP adapter
-    tasks/
-      new/page.tsx            # Creation route
-      [id]/edit/
-        page.tsx              # Server-loaded editing route
-        page.test.tsx
-    page.tsx                  # Server-loaded task list
-    page.test.tsx
-    layout.tsx                # Shared HTML and metadata
-    providers.tsx             # Application-wide client providers
-    providers.test.tsx         # tRPC error toast integration tests
-    error.tsx                 # Render error boundary
-    not-found.tsx             # Missing page or task
-    globals.css
-  components/
-    ui/
-      toast.tsx               # Shared accessible error toast
-      toast.test.tsx
-  features/
-    tasks/
-      components/
-        task-list.tsx         # Pagination and deletion
-        task-form.tsx         # Controlled fields and validation
-        create-task.tsx       # Creation mutation and navigation
-        edit-task.tsx         # Update mutation and navigation
-        *.test.tsx
-      schemas/
-        task.schema.ts        # Zod schemas and inferred task types
-        task.schema.test.ts
-      server/
-        task-router.ts        # Validated task procedures
-        task-router.test.ts
-        task-store.ts         # In-memory storage and isolated factory
-        task-store.test.ts
-  lib/
-    trpc/client.ts            # Typed React context and hooks
-  server/
-    api/
-      trpc.ts                 # tRPC initialization and error formatting
-      root.ts                 # Application router composition
-      root.test.ts            # Caller and HTTP integration tests
-```
-
-### Dependency boundaries
-
-- `app` defines URLs and composes feature components with server-side data. Client providers live at this composition boundary.
-- `components/ui` contains the shared error toast used by application providers.
-- `features/tasks/components` handles task interactions and uses the typed tRPC client for runtime server access.
-- `features/tasks/schemas` defines the shared contract. Types are inferred from Zod rather than duplicated in a separate model layer.
-- `features/tasks/server` owns task procedures and storage. Both modules use `server-only` to prevent accidental browser imports.
-- `server/api` initializes tRPC and registers feature routers. It does not contain task-specific storage or UI.
-- `lib/trpc` exposes the typed client context. Its server router import is type-only and is erased from the browser bundle.
-
-ESLint restricts aliased server implementation imports in client modules and prevents schemas from importing UI, transport or server implementation. Unit tests mock the `server-only` marker while exercising the real backend modules in Node.js.
-
-Tests live next to their modules. Imports point directly to the required module, keeping client/server boundaries visible. There are no empty generic component folders or repository/service interfaces for the single in-memory implementation.
-
-The server page invokes tRPC through a direct caller, avoiding a loopback HTTP request. Browser requests use `/api/trpc`. The home page is directly under `app/page.tsx`; loading feedback is managed by query, mutation and form navigation state. The editing route can return HTTP 404 before any loading boundary starts streaming.
-
-The query and mutation caches notify the shared toast when a client operation fails. Backend messages are preserved; connection failures use a readable Portuguese message. Forms retain their input and field-level validation. The toast can be dismissed and expires after five seconds.
-
-Square-bracket folders are reserved for the Next.js dynamic route conventions: `[id]` receives the task identifier and `[trpc]` receives the procedure path. There are no optional route groups.
-
-Deletion removes a task from the cache only after success and then invalidates the query. Failures preserve existing data. Dates use an explicit `America/Sao_Paulo` time zone to keep server and browser output consistent.
-
-The server renders the first page. `useInfiniteQuery` appends subsequent pages, and an `IntersectionObserver` requests more tasks near the viewport. The cursor contains the creation timestamp and ID, so deleting the cursor task does not break pagination. Failed requests preserve loaded pages and require a manual retry. Tasks inserted ahead of the current cursor appear on refresh rather than shifting existing page positions.
-
-The project uses plain CSS and system fonts. TypeScript runs in strict mode. The Next.js configuration pins the project root to prevent external lockfiles from affecting build tracing or Turbopack.
-
-## API contract
+## Task contract
 
 | Field | Type | Rule |
 | --- | --- | --- |
-| `id` | `string` | Server-generated UUID; immutable |
-| `title` | `string` | Required and unique after trimming whitespace, without case sensitivity |
-| `description` | `string`, optional | Empty values are normalized to absence |
+| `id` | `string` | Unique UUID generated by the server; immutable |
+| `title` | `string` | Required after trimming whitespace; repeated titles are allowed |
+| `description` | `string`, optional | Blank descriptions are normalized to absence |
 | `createdAt` | `number` | Server-generated Unix timestamp in milliseconds; immutable |
+
+Updates replace editable fields; omitting the description clears it. Only the task ID must be unique. Reading, updating or deleting an unknown ID returns a meaningful error without creating a record.
+
+## Architecture
+
+```text
+src/
+  app/                       # Routes, SSR, layout and application providers
+  components/ui/toast.tsx    # Shared error toast
+  features/tasks/
+    components/              # Task list, shared form, creation and editing
+    schemas/task.schema.ts   # Zod schemas and inferred types
+    server/                  # Task router and in-memory store
+  lib/trpc/client.ts         # Typed client context and hooks
+  server/api/                # tRPC initialization and root router
+```
+
+Tests are colocated with their modules. The feature owns its task logic, while route files compose components and load server data. Server modules use `server-only`; ESLint restricts server implementation imports in client code.
+
+The home page is `app/page.tsx`. Dynamic route folders `[id]` and `[trpc]` follow Next.js conventions. No optional route groups are used.
+
+The shared form validates input before sending a request. Successful mutations update or discard the affected query cache. Deletion removes a card only after the server confirms success. Failed operations preserve existing data and display feedback.
+
+The first page contains up to 10 tasks. Further pages use a cursor containing creation time and ID, with stable ordering even when the cursor task is deleted. The load-more button also supports keyboard access and retries. Dates use an explicit `America/Sao_Paulo` time zone for consistent server and browser output.
+
+## API and errors
 
 | Procedure | Type | Input |
 | --- | --- | --- |
+| `tasks.create` | mutation | `{ title, description? }` |
 | `tasks.list` | query | None |
 | `tasks.listPage` | query | `{ limit?, cursor?: { createdAt, id } }` |
 | `tasks.getById` | query | `{ id }` |
-| `tasks.create` | mutation | `{ title, description? }` |
 | `tasks.update` | mutation | `{ id, title, description? }` |
 | `tasks.delete` | mutation | `{ id }` |
 
-Updates replace editable fields; omitting the description clears it. Invalid inputs return `BAD_REQUEST`. Reading, updating or deleting an unknown UUID returns `NOT_FOUND`. Duplicate titles return `CONFLICT` (HTTP 409) on creation and editing, comparing trimmed text without case sensitivity. Updating a task may keep its own title. Failed writes preserve existing data. Internal errors use a generic response message.
+`getById` supports loading the edit form. `listPage` supports infinite scroll and returns `{ items, nextCursor? }`. Page size defaults to 10 and accepts integers from 1 to 50.
 
-Page size defaults to 10 and accepts integers from 1 to 50. `listPage` returns `{ items, nextCursor? }`; an absent cursor means there are no more results.
+The tRPC error formatter preserves standard codes and HTTP status mappings, including `CONFLICT`/409, and hides unexpected internal error messages. Client query and mutation errors reach the shared toast. Connection failures use a readable message, and local form validation remains inline.
 
-## Storage limitations
+Current task procedures do not enforce title uniqueness or manufacture a conflict response. Future procedures can raise `TRPCError` with code `CONFLICT`; transport and toast compatibility are tested without adding a production endpoint.
 
-Tasks live in a process-local Map and disappear on restart. Run the demo in one Node.js process: separate instances do not share data. A `globalThis` reference lets server pages and API handlers share the same store within that process, including during module reloads.
+## Limitations and dependencies
 
-Store reads return copies. Tasks are ordered by descending creation time, with ID as a stable tie-breaker. Tests create independent stores. There is no database or authentication; the list is shared.
+Tasks disappear when the Node.js process restarts. Run the demo in one process: multiple instances do not share memory. A `globalThis` reference shares the store between server pages and API handlers within that process, including development module reloads. There is no database or authentication.
 
-## Dependency notes
-
-The base uses Next.js 15.5.29 and React/React DOM 19.3.1. A PostCSS 8.5.32 override replaces the old version pinned by Next.js 15 and addresses the reported [source map file-read vulnerability](https://github.com/advisories/GHSA-6g55-p6wh-862q).
-
-The latest installation reported 14 moderate development-tool alerts originating from [minimatch](https://github.com/advisories/GHSA-g3hv-75wg-m249). ESLint 9 is outside its support window but is the latest major accepted by the selected Next.js 15 lint configuration. No incompatible transitive major upgrade was forced.
+Next.js is pinned to 15.5.29 and React/React DOM to 19.3.1. The lockfile records exact dependency versions. PostCSS 8.5.32 overrides the older version pinned by Next.js 15. The selected Next.js 15 lint configuration accepts ESLint up to version 9, which is outside its support window; known moderate development-tool advisories remain documented by `npm audit`.
 
 ## References
 
-- [Next.js 15](https://nextjs.org/docs/15)
+- [Next.js 15 documentation](https://nextjs.org/docs/15)
+- [tRPC error handling](https://trpc.io/docs/server/error-handling)
 - [tRPC TanStack Query integration](https://trpc.io/docs/client/tanstack-react-query/setup)
-- [Vitest](https://vitest.dev/guide/)
+- [Vitest documentation](https://vitest.dev/guide/)

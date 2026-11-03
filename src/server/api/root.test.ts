@@ -40,22 +40,24 @@ describe("tRPC integration", () => {
     });
   });
 
-  it("returns a readable conflict when creating a duplicate title over HTTP", async () => {
+  it("creates tasks with repeated titles and unique IDs over HTTP", async () => {
     const caller = appRouter.createCaller({});
     const task = await caller.tasks.create({ title: "HTTP duplicate create" });
+    const createdIds = [task.id];
     const client = createTRPCClient<AppRouter>({ links: [httpLink({
       url: "http://localhost/api/trpc", fetch: (input, init) => GET(new Request(input, init)),
     })] });
     try {
-      await expect(client.tasks.create.mutate({ title: "http duplicate create" })).rejects.toMatchObject({
-        message: "Já existe uma tarefa com esse título.", data: { code: "CONFLICT", httpStatus: 409 },
-      });
+      const created = await client.tasks.create.mutate({ title: task.title });
+      createdIds.push(created.id);
+      expect(created.title).toBe(task.title);
+      expect(created.id).not.toBe(task.id);
     } finally {
-      await caller.tasks.delete({ id: task.id });
+      for (const id of createdIds) await caller.tasks.delete({ id });
     }
   });
 
-  it("returns a readable conflict when editing to another task's title over HTTP", async () => {
+  it("updates a task to another task's title over HTTP", async () => {
     const caller = appRouter.createCaller({});
     const first = await caller.tasks.create({ title: "HTTP first task" });
     const second = await caller.tasks.create({ title: "HTTP second task" });
@@ -63,10 +65,9 @@ describe("tRPC integration", () => {
       url: "http://localhost/api/trpc", fetch: (input, init) => GET(new Request(input, init)),
     })] });
     try {
-      await expect(client.tasks.update.mutate({ id: second.id, title: first.title })).rejects.toMatchObject({
-        message: "Já existe uma tarefa com esse título.", data: { code: "CONFLICT", httpStatus: 409 },
-      });
-      expect(await caller.tasks.getById({ id: second.id })).toEqual(second);
+      const updated = await client.tasks.update.mutate({ id: second.id, title: first.title });
+      expect(updated).toEqual({ ...second, title: first.title });
+      expect(await caller.tasks.getById({ id: first.id })).toEqual(first);
     } finally {
       await caller.tasks.delete({ id: first.id });
       await caller.tasks.delete({ id: second.id });

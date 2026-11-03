@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 import { useQueryClient } from "@tanstack/react-query";
+import { TRPCError } from "@trpc/server";
+import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -9,6 +11,8 @@ import { EditTask } from "@/features/tasks/components/edit-task";
 import { TaskList } from "@/features/tasks/components/task-list";
 import { useTRPC } from "@/lib/trpc/client";
 import { appRouter } from "@/server/api/root";
+import { createTRPCRouter, publicProcedure } from "@/server/api/trpc";
+import { taskInputSchema, updateTaskSchema } from "@/features/tasks/schemas/task.schema";
 import { AppProviders } from "./providers";
 
 const navigation = vi.hoisted(() => ({ push: vi.fn(), refresh: vi.fn() }));
@@ -22,6 +26,18 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 
+function respondWithConflict() {
+  const fail = () => { throw new TRPCError({ code: "CONFLICT", message: "Conflito ao salvar a tarefa." }); };
+  const testRouter = createTRPCRouter({ tasks: createTRPCRouter({
+    create: publicProcedure.input(taskInputSchema).mutation(fail),
+    update: publicProcedure.input(updateTaskSchema).mutation(fail),
+  }) });
+  vi.mocked(globalThis.fetch).mockImplementation((input, init) => fetchRequestHandler({
+    endpoint: "/api/trpc", router: testRouter, createContext: () => ({}),
+    req: new Request(new URL(input instanceof Request ? input.url : String(input), "http://localhost"), init),
+  }));
+}
+
 function QueryFailureTrigger() {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
@@ -31,37 +47,32 @@ function QueryFailureTrigger() {
 }
 
 describe("tRPC error toasts", () => {
-  it("shows the backend conflict toast when creating a duplicate task", async () => {
-    const caller = appRouter.createCaller({});
-    const task = await caller.tasks.create({ title: "Duplicate task" });
-    try {
-      render(<AppProviders><CreateTask /></AppProviders>);
-      await userEvent.type(screen.getByLabelText(/Título/), "duplicate task");
-      await userEvent.click(screen.getByRole("button", { name: "Criar tarefa" }));
-      const toast = await screen.findByRole("alert", { name: "Erro" });
-      expect(toast.textContent).toContain("Já existe uma tarefa com esse título.");
-      expect(screen.getByLabelText(/Título/)).toHaveProperty("value", "duplicate task");
-      expect(navigation.push).not.toHaveBeenCalled();
-    } finally {
-      await caller.tasks.delete({ id: task.id });
-    }
+  it("shows a future conflict response without requiring unique task titles", async () => {
+    respondWithConflict();
+    render(<AppProviders><CreateTask /></AppProviders>);
+    await userEvent.type(screen.getByLabelText(/Título/), "Test task");
+    await userEvent.click(screen.getByRole("button", { name: "Criar tarefa" }));
+    const toast = await screen.findByRole("alert", { name: "Erro" });
+    expect(toast.textContent).toContain("Conflito ao salvar a tarefa.");
+    expect(screen.getByLabelText(/Título/)).toHaveProperty("value", "Test task");
+    expect(navigation.push).not.toHaveBeenCalled();
   });
 
-  it("shows the backend conflict toast when editing to an existing title", async () => {
+  it("preserves edit input when a future conflict response is returned", async () => {
     const caller = appRouter.createCaller({});
-    const first = await caller.tasks.create({ title: "First toast task" });
     const second = await caller.tasks.create({ title: "Second toast task" });
     try {
+      respondWithConflict();
       render(<AppProviders><EditTask task={second} /></AppProviders>);
       await userEvent.clear(screen.getByLabelText(/Título/));
-      await userEvent.type(screen.getByLabelText(/Título/), first.title);
+      await userEvent.type(screen.getByLabelText(/Título/), "Updated task");
       await userEvent.click(screen.getByRole("button", { name: "Salvar alterações" }));
       const toast = await screen.findByRole("alert", { name: "Erro" });
-      expect(toast.textContent).toContain("Já existe uma tarefa com esse título.");
+      expect(toast.textContent).toContain("Conflito ao salvar a tarefa.");
+      expect(screen.getByLabelText(/Título/)).toHaveProperty("value", "Updated task");
       expect(await caller.tasks.getById({ id: second.id })).toEqual(second);
       expect(navigation.push).not.toHaveBeenCalled();
     } finally {
-      await caller.tasks.delete({ id: first.id });
       await caller.tasks.delete({ id: second.id });
     }
   });

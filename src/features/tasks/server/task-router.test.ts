@@ -12,19 +12,21 @@ describe("task procedures", () => {
     caller = createTasksRouter(createTaskStore()).createCaller({});
   });
 
-  it.each(["Study", " study ", "STUDY"])("rejects a duplicate title when creating: %s", async (title) => {
+  it.each(["Study", " study ", "STUDY"])("allows repeated titles while generating unique IDs: %s", async (title) => {
     const existing = await caller.create({ title: "Study" });
-    await expect(caller.create({ title })).rejects.toMatchObject({
-      code: "CONFLICT", message: "Já existe uma tarefa com esse título.",
-    });
-    expect(await caller.list()).toEqual([existing]);
+    const created = await caller.create({ title });
+    expect(created.id).not.toBe(existing.id);
+    expect(created.title).toBe(title.trim());
+    expect(await caller.list()).toHaveLength(2);
+    expect(await caller.getById({ id: existing.id })).toEqual(existing);
   });
 
-  it.each(["First", " first ", "FIRST"])("rejects another task's title when updating: %s", async (title) => {
-    await caller.create({ title: "First" });
+  it.each(["First", " first ", "FIRST"])("allows editing to a title used by another task: %s", async (title) => {
+    const first = await caller.create({ title: "First" });
     const original = await caller.create({ title: "Second", description: "Original description" });
-    await expect(caller.update({ id: original.id, title })).rejects.toMatchObject({ code: "CONFLICT" });
-    expect(await caller.getById({ id: original.id })).toEqual(original);
+    const updated = await caller.update({ id: original.id, title, description: original.description });
+    expect(updated).toEqual({ ...original, title: title.trim() });
+    expect(await caller.getById({ id: first.id })).toEqual(first);
   });
 
   it("allows updating a task while keeping its own title", async () => {
@@ -34,13 +36,12 @@ describe("task procedures", () => {
     expect(await caller.list()).toHaveLength(1);
   });
 
-  it("accepts only one of two concurrent creates with the same title", async () => {
-    const results = await Promise.allSettled([
-      caller.create({ title: "Study" }), caller.create({ title: "study" }),
+  it("allows concurrent creates with the same title and different IDs", async () => {
+    const results = await Promise.all([
+      caller.create({ title: "Study" }), caller.create({ title: "Study" }),
     ]);
-    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
-    expect(results.find((result) => result.status === "rejected")).toMatchObject({ reason: { code: "CONFLICT" } });
-    expect(await caller.list()).toHaveLength(1);
+    expect(new Set(results.map((task) => task.id)).size).toBe(2);
+    expect(await caller.list()).toHaveLength(2);
   });
 
   it("creates, lists, finds, updates and deletes a task", async () => {

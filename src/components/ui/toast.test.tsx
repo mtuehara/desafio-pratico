@@ -5,7 +5,7 @@ import { ToastProvider, useToast } from "./toast";
 
 function ErrorTrigger() {
   const { showError } = useToast();
-  return <button onClick={() => showError("Já existe uma tarefa com esse título.")}>Trigger error</button>;
+  return <button onClick={() => showError("Tarefa não encontrada.")}>Trigger error</button>;
 }
 
 function renderToast() {
@@ -18,7 +18,7 @@ describe("error toast", () => {
   it("shows the error message as an accessible alert", () => {
     renderToast();
     fireEvent.click(screen.getByRole("button", { name: "Trigger error" }));
-    expect(screen.getByRole("alert", { name: "Erro" }).textContent).toContain("Já existe uma tarefa com esse título.");
+    expect(screen.getByRole("alert", { name: "Erro" }).textContent).toContain("Tarefa não encontrada.");
   });
 
   it("allows dismissing the error", () => {
