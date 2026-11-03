@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Tarefa } from "@/shared/tarefa";
 import { ListaTarefas } from "./lista-tarefas";
 
-const api = vi.hoisted(() => ({ listar: vi.fn() }));
+const api = vi.hoisted(() => ({ listar: vi.fn(), deletar: vi.fn() }));
 
 vi.mock("@/trpc/client", () => ({
   useTRPC: () => ({
@@ -14,6 +14,9 @@ vi.mock("@/trpc/client", () => ({
       listar: {
         queryOptions: () => ({ queryKey: ["tarefas"], queryFn: api.listar }),
         queryKey: () => ["tarefas"],
+      },
+      deletar: {
+        mutationOptions: (options: object) => ({ ...options, mutationFn: api.deletar }),
       },
     },
   }),
@@ -38,6 +41,8 @@ afterEach(cleanup);
 beforeEach(() => {
   api.listar.mockReset();
   api.listar.mockResolvedValue([tarefa]);
+  api.deletar.mockReset();
+  api.deletar.mockResolvedValue({ id: tarefa.id });
 });
 
 describe("listagem de tarefas", () => {
@@ -68,5 +73,38 @@ describe("listagem de tarefas", () => {
     await userEvent.click(screen.getByRole("button", { name: "Atualizar lista" }));
     await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("Não foi possível atualizar"));
     expect(screen.getByRole("heading", { name: tarefa.titulo })).toBeTruthy();
+  });
+
+  it("remove o cartão e mostra sucesso após excluir", async () => {
+    api.listar.mockResolvedValue([]);
+    renderLista();
+    await userEvent.click(screen.getByRole("button", { name: `Excluir ${tarefa.titulo}` }));
+    await screen.findByText("Tarefa excluída com sucesso.");
+    expect(screen.queryByRole("heading", { name: tarefa.titulo })).toBeNull();
+    expect(api.deletar.mock.calls[0][0]).toEqual({ id: tarefa.id });
+  });
+
+  it("mantém o cartão e mostra o erro quando a exclusão falha", async () => {
+    api.deletar.mockRejectedValue(new Error("Tarefa não encontrada."));
+    renderLista();
+    await userEvent.click(screen.getByRole("button", { name: `Excluir ${tarefa.titulo}` }));
+    await screen.findByRole("alert");
+    expect(screen.getByRole("alert").textContent).toBe("Tarefa não encontrada.");
+    expect(screen.getByRole("heading", { name: tarefa.titulo })).toBeTruthy();
+  });
+
+  it("bloqueia exclusões enquanto a resposta está pendente", async () => {
+    const operacao = Promise.withResolvers<{ id: string }>();
+    api.deletar.mockReturnValue(operacao.promise);
+    api.listar.mockResolvedValue([]);
+    renderLista();
+    const botao = screen.getByRole("button", { name: `Excluir ${tarefa.titulo}` });
+    await userEvent.click(botao);
+    expect(botao).toHaveProperty("disabled", true);
+    expect(botao.textContent).toBe("Excluindo…");
+    await userEvent.click(botao);
+    expect(api.deletar).toHaveBeenCalledTimes(1);
+    await act(async () => { operacao.resolve({ id: tarefa.id }); });
+    await screen.findByText("Tarefa excluída com sucesso.");
   });
 });

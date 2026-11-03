@@ -70,6 +70,14 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
   border-color: #a6afbd;
 }
 
+.danger {
+  background: #a11818;
+}
+
+[role="status"] {
+  color: #15562c;
+}
+
 .toolbar, .actions {
   display: flex;
   align-items: center;
