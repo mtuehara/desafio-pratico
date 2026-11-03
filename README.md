@@ -1,6 +1,6 @@
 # Gerenciador de tarefas
 
-Desafio prático com Next.js 15, TypeScript e tRPC. A base e a integração tRPC estão implementadas; as funcionalidades de tarefas serão adicionadas nas próximas etapas.
+Desafio prático com Next.js 15, TypeScript e tRPC. A base, a integração tRPC e o CRUD em memória estão implementados. As páginas de tarefas serão adicionadas nas próximas etapas.
 
 ## Executar a base
 
@@ -30,6 +30,8 @@ O `build` deve terminar antes do `start`. `npm ci` instala as versões registrad
 `npm test` executa o Vitest uma vez; `npm run test:watch` acompanha alterações durante o desenvolvimento. Os testes ficam junto dos módulos, com sufixo `.test.ts` ou `.test.tsx`.
 
 A integração verifica o caller do servidor, a comunicação entre o cliente tipado e o adaptador HTTP e uma procedure inexistente, sem depender de um servidor de rede. A consulta `status` está disponível em `/api/trpc/status`.
+
+Os testes unitários cobrem esquemas de entrada, armazenamento isolado, ordenação, cópias defensivas, operações CRUD e erros `BAD_REQUEST` e `NOT_FOUND`. Cada teste cria seu próprio armazenamento. ID e data de criação são preservados na edição.
 
 ## Arquivos da base
 
