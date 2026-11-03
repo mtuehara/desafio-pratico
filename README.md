@@ -16,6 +16,8 @@ npm run dev
 
 Open [localhost:3000](http://localhost:3000).
 
+For manual testing, the home-page button creates 10 random tasks through the existing `tasks.create` procedure and refreshes the list. Each click adds another batch of 10; pending requests disable the button, and partial failures report the number created.
+
 For production, stop the development server before building and starting the application. Both modes use the same `.next` directory.
 
 ```sh
