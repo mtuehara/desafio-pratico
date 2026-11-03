@@ -118,3 +118,36 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
   background: #fff0f0;
   border-radius: 0.4rem;
 }
+
+.task-form {
+  background: white;
+  padding: 1.5rem;
+  border: 1px solid #d0d7e1;
+  border-radius: 0.6rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+label {
+  font-weight: 600;
+}
+
+input, textarea {
+  width: 100%;
+  border: 1px solid #8a96a8;
+  border-radius: 0.4rem;
+  padding: 0.75rem;
+  font: inherit;
+}
+
+textarea {
+  resize: vertical;
+}
+
+[aria-invalid="true"] {
+  border-color: #a11818;
+}
